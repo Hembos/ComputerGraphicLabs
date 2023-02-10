@@ -95,11 +95,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         assert(SUCCEEDED(result));
     }
 
-    UINT references;
-
     if (m_pBackBufferRTV != NULL)
     {
-        references = m_pBackBufferRTV->Release();
+        m_pBackBufferRTV->Release();
         m_pBackBufferRTV = NULL;
     }
 
@@ -164,8 +162,13 @@ bool InitializeDirectx(HWND hWnd)
 
     if (SUCCEEDED(result))
     {
+        UINT flags = 0;
+        #ifdef _DEBUG
+            flags = D3D11_CREATE_DEVICE_DEBUG;
+        #endif // _DEBUG
+
         result = D3D11CreateDevice(pSelectedAdapter, D3D_DRIVER_TYPE_UNKNOWN, NULL,
-                                    D3D11_CREATE_DEVICE_DEBUG, levels, 1, D3D11_SDK_VERSION, &m_pDevice, &level, &m_pDeviceContext);
+                                    flags, levels, 1, D3D11_SDK_VERSION, &m_pDevice, &level, &m_pDeviceContext);
         assert(level == D3D_FEATURE_LEVEL_11_0);
         assert(SUCCEEDED(result));
 
