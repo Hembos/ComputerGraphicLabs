@@ -28,6 +28,8 @@
 #define MAX_LOADSTRING 100
 #define M_PI 3.14159265358979323846
 
+#define SAFE_RELEASE(p) if (p != NULL) { p->Release(); p = NULL; }
+
 // Global Variables:
 HINSTANCE hInst;                                // current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
@@ -150,71 +152,17 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         assert(SUCCEEDED(result));
     }
 
-    if (m_pIndexBuffer != NULL)
-    {
-        m_pIndexBuffer->Release();
-        m_pIndexBuffer = NULL;
-    }
-
-    if (m_pVertextBuffer != NULL)
-    {
-        m_pVertextBuffer->Release();
-        m_pVertextBuffer = NULL;
-    }
-
-    if (m_pGeomBuffer != NULL)
-    {
-        m_pGeomBuffer->Release();
-        m_pGeomBuffer = NULL;
-    }
-
-    if (m_pSceneBuffer != NULL)
-    {
-        m_pSceneBuffer->Release();
-        m_pSceneBuffer = NULL;
-    }
-
-    if (m_pInputLayout != NULL)
-    {
-        m_pInputLayout->Release();
-        m_pInputLayout = NULL;
-    }
-
-    if (m_pVertexShader != NULL)
-    {
-        m_pVertexShader->Release();
-        m_pVertexShader = NULL;
-    }
-
-    if (m_pPixelShader != NULL)
-    {
-        m_pPixelShader->Release();
-        m_pPixelShader = NULL;
-    }
-
-    if (m_pBackBufferRTV != NULL)
-    {
-        m_pBackBufferRTV->Release();
-        m_pBackBufferRTV = NULL;
-    }
-
-    if (m_pSwapChain != NULL)
-    {
-        m_pSwapChain->Release();
-        m_pSwapChain = NULL;
-    }
-
-    if (m_pDeviceContext != NULL)
-    {
-        m_pDeviceContext->Release();
-        m_pDeviceContext = NULL;
-    }
-
-    if (m_pDevice != NULL)
-    {
-        m_pDevice->Release();
-        m_pDevice = NULL;
-    }
+    SAFE_RELEASE(m_pIndexBuffer);
+    SAFE_RELEASE(m_pVertextBuffer);
+    SAFE_RELEASE(m_pGeomBuffer);
+    SAFE_RELEASE(m_pSceneBuffer);
+    SAFE_RELEASE(m_pInputLayout);
+    SAFE_RELEASE(m_pVertexShader);
+    SAFE_RELEASE(m_pPixelShader);
+    SAFE_RELEASE(m_pBackBufferRTV);
+    SAFE_RELEASE(m_pSwapChain);
+    SAFE_RELEASE(m_pDeviceContext);
+    SAFE_RELEASE(m_pDevice);
 
     gHWnd = NULL;
 
@@ -304,25 +252,12 @@ bool InitializeDirectx(HWND hWnd)
             result = m_pDevice->CreateRenderTargetView(pBackBuffer, NULL, &m_pBackBufferRTV);
             assert(SUCCEEDED(result));
 
-            if (pBackBuffer != NULL)
-            {
-                pBackBuffer->Release();
-                pBackBuffer = NULL;
-            }
+            SAFE_RELEASE(pBackBuffer);
         }
     }
 
-    if (pSelectedAdapter != NULL)
-    {
-        pSelectedAdapter->Release();
-        pSelectedAdapter = NULL;
-    }
-
-    if (pFactory != NULL)
-    {
-        pFactory->Release();
-        pFactory = NULL;
-    }
+    SAFE_RELEASE(pSelectedAdapter);
+    SAFE_RELEASE(pFactory);
 
     return SUCCEEDED(result);
 }
