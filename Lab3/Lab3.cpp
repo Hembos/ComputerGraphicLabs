@@ -46,6 +46,7 @@ ID3D11InputLayout* m_pInputLayout = NULL;
 ID3D11VertexShader* m_pVertexShader = NULL;
 ID3D11PixelShader* m_pPixelShader = NULL;
 ID3D11Buffer* m_pGeomBuffer = NULL;
+ID3D11Buffer* m_pSceneBuffer = NULL;
 
 float rotateCamX = 0.0f;
 float rotateCamY = 0.0f;
@@ -59,6 +60,11 @@ struct Vertex
 struct GeomBuffer
 {
     DirectX::XMMATRIX modelMatrix;
+};
+
+struct SceneBuffer
+{
+    DirectX::XMMATRIX vp;
 };
 
 // Forward declarations of functions included in this code module:
@@ -160,6 +166,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     {
         m_pGeomBuffer->Release();
         m_pGeomBuffer = NULL;
+    }
+
+    if (m_pSceneBuffer != NULL)
+    {
+        m_pSceneBuffer->Release();
+        m_pSceneBuffer = NULL;
     }
 
     if (m_pInputLayout != NULL)
@@ -405,6 +417,23 @@ bool CreateGeometry()
         result = SetResourceName(m_pGeomBuffer, "GeomBuffer");
     }
 
+    if (SUCCEEDED(result))
+    {
+        desc = { 0 };
+        desc.ByteWidth = sizeof(SceneBuffer);
+        desc.Usage = D3D11_USAGE_DYNAMIC;
+        desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+        desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+        desc.MiscFlags = 0;
+        desc.StructureByteStride = 0;
+        result = m_pDevice->CreateBuffer(&desc, NULL, &m_pSceneBuffer);
+    }
+
+    if (SUCCEEDED(result))
+    {
+        result = SetResourceName(m_pSceneBuffer, "SceneBuffer");
+    }
+
     return SUCCEEDED(result);
 }
 
@@ -506,8 +535,17 @@ void Render()
     float c = 1.0f / tanf(fov / 2);
     float aspectRatio = (float)m_height / m_width;
     DirectX::XMMATRIX p = DirectX::XMMatrixPerspectiveLH(tanf(fov / 2) * 2 * n, tanf(fov / 2) * 2 * n * aspectRatio, n, f);
-    geomBuffer.modelMatrix = DirectX::XMMatrixMultiply(DirectX::XMMatrixMultiply(m, v), p);
+    geomBuffer.modelMatrix = m;
     m_pDeviceContext->UpdateSubresource(m_pGeomBuffer, 0, nullptr, &geomBuffer, 0, 0);
+
+    D3D11_MAPPED_SUBRESOURCE subresource;
+    HRESULT result = m_pDeviceContext->Map(m_pSceneBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
+    if (SUCCEEDED(result))
+    {
+        SceneBuffer& sceneBuffer = *reinterpret_cast<SceneBuffer*>(subresource.pData);
+        sceneBuffer.vp = DirectX::XMMatrixMultiply(v, p);
+        m_pDeviceContext->Unmap(m_pSceneBuffer, 0);
+    }
 
     D3D11_VIEWPORT viewport;
     viewport.TopLeftX = 0;
@@ -536,8 +574,8 @@ void Render()
     m_pDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     m_pDeviceContext->VSSetShader(m_pVertexShader, nullptr, 0);
     m_pDeviceContext->PSSetShader(m_pPixelShader, nullptr, 0);
-    ID3D11Buffer* constBuffers[] = { m_pGeomBuffer };
-    m_pDeviceContext->VSSetConstantBuffers(0, 1, constBuffers);
+    ID3D11Buffer* constBuffers[] = { m_pGeomBuffer, m_pSceneBuffer };
+    m_pDeviceContext->VSSetConstantBuffers(0, 2, constBuffers);
     m_pDeviceContext->DrawIndexed(36, 0, 0);
 }
 
