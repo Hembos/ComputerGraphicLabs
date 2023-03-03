@@ -11,13 +11,13 @@ cbuffer SceneBuffer : register (b1)
 struct VSInput
 {
 	float3 pos : POSITION;
-	float4 color : COLOR;
+	float2 uv : TEXCOORD;
 };
 
 struct VSOutput
 {
 	float4 pos : SV_POSITION;
-	float4 color : COLOR;
+	float2 uv : TEXCOORD;
 };
 
 VSOutput vs(VSInput vertex)
@@ -26,7 +26,7 @@ VSOutput vs(VSInput vertex)
 
 	float4 worldPos = mul(model, float4(vertex.pos, 1.0f));
 	result.pos = mul(vp, worldPos);
-	result.color = vertex.color;
+	result.uv = vertex.uv;
 
 	return result;
 }

@@ -1,10 +1,13 @@
+Texture2D texture : register(t0);
+SamplerState sampler : register(s0);
+
 struct VSOutput
 {
 	float4 pos : SV_Position;
-	float4 color : COLOR;
+	float2 uv : TEXCOORD;
 };
 
 float4 ps(VSOutput pixel) : SV_Target0
 {
-	return pixel.color;
+	return float4(texture.Sample(sampler, pixel.uv).xyz, 1.0);
 }
