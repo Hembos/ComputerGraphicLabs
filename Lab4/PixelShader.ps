@@ -1,5 +1,5 @@
-Texture2D texture : register(t0);
-SamplerState sampler : register(s0);
+Texture2D squareTexture : register(t0);
+SamplerState squareSampler : register(s0);
 
 struct VSOutput
 {
@@ -9,5 +9,5 @@ struct VSOutput
 
 float4 ps(VSOutput pixel) : SV_Target0
 {
-	return float4(texture.Sample(sampler, pixel.uv).xyz, 1.0);
+	return float4(squareTexture.Sample(squareSampler, pixel.uv).xyz, 1.0);
 }
