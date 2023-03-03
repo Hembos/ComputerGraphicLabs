@@ -3,6 +3,7 @@
 
 #include "framework.h"
 #include "Lab4.h"
+#include "DDSTextureLoader11.h"
 
 #include <d3d11.h>
 #include <dxgi.h>
@@ -32,14 +33,6 @@
 
 #define SAFE_RELEASE(p) if (p != NULL) { p->Release(); p = NULL; }
 
-#define DDS_FOURCC 0x00000004
-
-#ifndef MAKEFOURCC
-#define MAKEFOURCC(ch0, ch1, ch2, ch3)                              \
-                ((uint32_t)(uint8_t)(ch0) | ((uint32_t)(uint8_t)(ch1) << 8) |       \
-                ((uint32_t)(uint8_t)(ch2) << 16) | ((uint32_t)(uint8_t)(ch3) << 24 ))
-#endif /* defined(MAKEFOURCC) */
-
 // Global Variables:
 HINSTANCE hInst;                                // current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
@@ -59,7 +52,6 @@ ID3D11VertexShader* m_pVertexShader = NULL;
 ID3D11PixelShader* m_pPixelShader = NULL;
 ID3D11Buffer* m_pGeomBuffer = NULL;
 ID3D11Buffer* m_pSceneBuffer = NULL;
-ID3D11Texture2D* m_pTexture = NULL;
 ID3D11ShaderResourceView* m_pTextureView = NULL;
 ID3D11SamplerState* m_pSampler = NULL;
 
@@ -191,7 +183,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     SAFE_RELEASE(m_pVertextBuffer);
     SAFE_RELEASE(m_pGeomBuffer);
     SAFE_RELEASE(m_pSceneBuffer);
-    SAFE_RELEASE(m_pTexture);
+    SAFE_RELEASE(m_pSampler);
     SAFE_RELEASE(m_pTextureView);
     SAFE_RELEASE(m_pInputLayout);
     SAFE_RELEASE(m_pVertexShader);
@@ -304,168 +296,9 @@ HRESULT SetResourceName(ID3D11DeviceChild* pResource, const std::string name)
     return pResource->SetPrivateData(WKPDID_D3DDebugObjectName, (UINT)name.length(), name.c_str());
 }
 
-bool LoadDDS(const std::wstring& fileName, TextureDesc& textureDesc)
-{
-    struct DDS_PIXELFORMAT
-    {
-        DWORD    size;
-        DWORD    flags;
-        DWORD    fourCC;
-        DWORD    RGBBitCount;
-        DWORD    RBitMask;
-        DWORD    GBitMask;
-        DWORD    BBitMask;
-        DWORD    ABitMask;
-    };
-
-    struct DDS_HEADER
-    {
-        DWORD           dwSize;
-        DWORD           dwFlags;
-        DWORD           dwHeight;
-        DWORD           dwWidth;
-        DWORD           dwPitchOrLinearSize;
-        DWORD           dwDepth;
-        DWORD           dwMipMapCount;
-        DWORD           dwReserved1[11];
-        DDS_PIXELFORMAT ddspf;
-        DWORD           dwCaps;
-        DWORD           dwCaps2;
-        DWORD           dwCaps3;
-        DWORD           dwCaps4;
-        DWORD           dwReserved2;
-    };
-
-    struct DDS_HEADER_DXT10
-    {
-        DXGI_FORMAT     dxgiFormat;
-        uint32_t        resourceDimension;
-        uint32_t        miscFlag; // see D3D11_RESOURCE_MISC_FLAG
-        uint32_t        arraySize;
-        uint32_t        miscFlags2;
-    };
-
-    HANDLE hFile = CreateFile(fileName.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    DWORD dwBytesRead = 0;
-    std::unique_ptr<uint8_t[]> readBuffer;
-
-    if (hFile == INVALID_HANDLE_VALUE)
-    {
-        return false;
-    }
-
-    FILE_STANDARD_INFO fileInfo;
-    if (!GetFileInformationByHandleEx(hFile, FileStandardInfo, &fileInfo, sizeof(fileInfo)))
-    {
-        return false;
-    }
-
-    readBuffer.reset(new (std::nothrow) uint8_t[fileInfo.EndOfFile.LowPart]);
-    if (!ReadFile(hFile, readBuffer.get(), fileInfo.EndOfFile.LowPart, &dwBytesRead, nullptr))
-    {
-        readBuffer.reset();
-        DWORD A = GetLastError();
-        return false;
-    }
-
-    if (dwBytesRead < fileInfo.EndOfFile.LowPart)
-    {
-        readBuffer.reset();
-        return false;
-    }
-
-    auto const dwMagicNumber = *reinterpret_cast<const uint32_t*>(readBuffer.get());
-    if (dwMagicNumber != 0x20534444)
-    {
-        readBuffer.reset();
-        return false;
-    }
-
-    auto hdr = reinterpret_cast<const DDS_HEADER*>(readBuffer.get() + sizeof(uint32_t));
-    if (hdr->dwSize != sizeof(DDS_HEADER) ||
-        hdr->ddspf.size != sizeof(DDS_PIXELFORMAT))
-    {
-        readBuffer.reset();
-        return false;
-    }
-
-    textureDesc.pitch = hdr->dwPitchOrLinearSize;
-    textureDesc.mipmapsCount = hdr->dwMipMapCount;
-    if ((hdr->ddspf.flags & DDS_FOURCC)
-        && MAKEFOURCC('D', 'X', 'T', '1') == hdr->ddspf.fourCC)
-    {
-        textureDesc.fmt = DXGI_FORMAT_BC1_UNORM;
-    }
-    else
-    {
-        return false;
-    }
-    textureDesc.width = hdr->dwWidth;
-    textureDesc.height = hdr->dwHeight;
-    auto offset = sizeof(uint32_t) + sizeof(DDS_HEADER);
-    textureDesc.pData = readBuffer.get() + offset;
-
-    return true;
-}
-
 bool CreateTexture()
 {
-    DXGI_FORMAT textureFmt;
-    std::wstring textureName = L"cat.dds";
-    TextureDesc textureDesc;
-
-    if (!LoadDDS(textureName, textureDesc))
-    {
-        return false;
-    }
-
-    textureFmt = textureDesc.fmt;
-    D3D11_TEXTURE2D_DESC desc = {};
-    desc.Format = textureDesc.fmt;
-    desc.ArraySize = 1;
-    desc.MipLevels = textureDesc.mipmapsCount;
-    desc.Usage = D3D11_USAGE_IMMUTABLE;
-    desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-    desc.CPUAccessFlags = 0;
-    desc.MiscFlags = 0;
-    desc.SampleDesc.Count = 1;
-    desc.SampleDesc.Quality = 0;
-    desc.Height = textureDesc.height;
-    desc.Width = textureDesc.width;
-
-    UINT32 blockWidth = ceil((float)desc.Width / 4u);
-    UINT32 blockHeight = ceil((float)desc.Height / 4u);
-    UINT32 pitch = blockWidth * 8;
-    const char* pSrcData = reinterpret_cast<const char*>(textureDesc.pData);
-
-    std::vector<D3D11_SUBRESOURCE_DATA> data;
-    data.resize(desc.MipLevels);
-    for (UINT32 i = 0; i < desc.MipLevels; i++)
-    {
-        data[i].pSysMem = pSrcData;
-        data[i].SysMemPitch = pitch;
-        data[i].SysMemSlicePitch = 0;
-        pSrcData += pitch * blockHeight;
-        blockHeight = max(1u, blockHeight / 2);
-        blockWidth = max(1u, blockWidth / 2);
-        pitch = blockWidth * 8;
-    }
-
-    HRESULT result = m_pDevice->CreateTexture2D(&desc, data.data(), &m_pTexture);
-    if (SUCCEEDED(result))
-    {
-        result = SetResourceName(m_pTexture, "Texture");
-    }
-
-    if (SUCCEEDED(result))
-    {
-        D3D11_SHADER_RESOURCE_VIEW_DESC desc = {};
-        desc.Format = textureFmt;
-        desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-        desc.Texture2D.MipLevels = 1;
-        desc.Texture2D.MostDetailedMip = 0;
-        result = m_pDevice->CreateShaderResourceView(m_pTexture, &desc, &m_pTextureView);
-    }
+    HRESULT result = DirectX::CreateDDSTextureFromFile(m_pDevice, L"cat.dds", nullptr, &m_pTextureView);
 
     if (SUCCEEDED(result))
     {
@@ -742,7 +575,7 @@ void Render()
 
     ID3D11Buffer* vertextBuffers[] = { m_pVertextBuffer };
 
-    UINT strides[] = { 16 };
+    UINT strides[] = { 20 };
     UINT offsets[] = { 0 };
     m_pDeviceContext->IASetVertexBuffers(0, 1, vertextBuffers, strides, offsets);
     m_pDeviceContext->IASetInputLayout(m_pInputLayout);
