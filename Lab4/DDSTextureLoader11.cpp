@@ -20,6 +20,7 @@
 #include <cassert>
 #include <memory>
 #include <new>
+#include <vector>
 
 #ifdef _MSC_VER
 // Off by default warnings
@@ -2070,6 +2071,83 @@ HRESULT DirectX::CreateDDSTextureFromFileEx(
 
         if (alphaMode)
             *alphaMode = GetAlphaMode(header);
+    }
+
+    return hr;
+}
+
+HRESULT DirectX::CreateDDSCubeTextureFromFile(
+    ID3D11Device* d3dDevice,
+    const wchar_t** fileName,
+    ID3D11Resource** texture,
+    ID3D11ShaderResourceView** textureView,
+    size_t maxsize,
+    DDS_ALPHA_MODE* alphaMode) noexcept
+{
+    HRESULT hr;
+
+    const DDS_HEADER* header;
+    const uint8_t* bitData;
+    size_t bitSize;
+
+    std::unique_ptr<uint8_t[]> ddsData[6];
+
+    for (int i = 0; i < 6; i++)
+    {
+        hr = LoadTextureDataFromFile(fileName[i],
+            ddsData[i],
+            &header,
+            &bitData,
+            &bitSize
+        );
+        if (!SUCCEEDED(hr))
+        {
+            break;
+        }
+    }
+
+    ID3D11Texture2D* cubeTexture = NULL;
+    if (SUCCEEDED(hr))
+    {
+        D3D11_TEXTURE2D_DESC texDesc;
+        texDesc.Width = header->width;
+        texDesc.Height = header->height;
+        texDesc.MipLevels = 1;
+        texDesc.ArraySize = 6;
+        texDesc.Format = GetDXGIFormat(header->ddspf);
+        texDesc.CPUAccessFlags = 0;
+        texDesc.SampleDesc.Count = 1;
+        texDesc.SampleDesc.Quality = 0;
+        texDesc.Usage = D3D11_USAGE_IMMUTABLE;
+        texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        texDesc.CPUAccessFlags = 0;
+        texDesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
+
+        UINT32 blockWidth = ceil((float)header->width / 4);
+        UINT32 blockHeight = ceil((float)header->height / 4);
+
+        UINT32 pitch = blockWidth * 8;
+
+        D3D11_SUBRESOURCE_DATA pData[6];
+        for (int i = 0; i < 6; i++)
+        {
+            pData[i].pSysMem = ddsData[i].get();
+            pData[i].SysMemPitch = pitch;
+            pData[i].SysMemSlicePitch = 0;
+        }
+
+        hr = d3dDevice->CreateTexture2D(&texDesc, pData, &cubeTexture);
+    }
+
+    if (SUCCEEDED(hr))
+    {
+        D3D11_SHADER_RESOURCE_VIEW_DESC SMViewDesc;
+        SMViewDesc.Format = GetDXGIFormat(header->ddspf);
+        SMViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
+        SMViewDesc.TextureCube.MipLevels = 1;
+        SMViewDesc.TextureCube.MostDetailedMip = 0;
+
+        hr = d3dDevice->CreateShaderResourceView(cubeTexture, &SMViewDesc, textureView);
     }
 
     return hr;

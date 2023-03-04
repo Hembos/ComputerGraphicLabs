@@ -5,6 +5,8 @@
 #include "Lab4.h"
 #include "DDSTextureLoader11.h"
 
+#include <dinput.h>
+
 #include <d3d11.h>
 #include <dxgi.h>
 #include <d3dcompiler.h>
@@ -55,6 +57,15 @@ ID3D11Buffer* m_pSceneBuffer = NULL;
 ID3D11ShaderResourceView* m_pTextureView = NULL;
 ID3D11SamplerState* m_pSampler = NULL;
 
+ID3D11ShaderResourceView* m_pCubeTextureView = NULL;
+ID3D11Buffer* m_pIndexSphereBuffer = NULL;
+ID3D11Buffer* m_pVertextSphereBuffer = NULL;
+ID3D11Buffer* m_pGeomSphereBuffer = NULL;
+ID3D11Buffer* m_pSceneSphereBuffer = NULL;
+ID3D11InputLayout* m_pInputSphereLayout = NULL;
+ID3D11VertexShader* m_pVertexSphereShader = NULL;
+ID3D11PixelShader* m_pPixelSphereShader = NULL;
+
 float rotateCamX = 0.0f;
 float rotateCamY = 0.0f;
 
@@ -68,6 +79,11 @@ struct TextureVertex
 {
     float x, y, z;
     float u, v;
+};
+
+struct SphereVertex
+{
+    float x, y, z;
 };
 
 struct TextureDesc
@@ -88,6 +104,19 @@ struct GeomBuffer
 struct SceneBuffer
 {
     DirectX::XMMATRIX vp;
+    DirectX::XMVECTOR cameraPos;
+};
+
+struct SkyboxGeomBuffer
+{
+    DirectX::XMMATRIX modelMatrix;
+    DirectX::XMVECTOR cameraPos;
+};
+
+struct SkyboxSceneBuffer
+{
+    DirectX::XMMATRIX vp;
+    DirectX::XMVECTOR size;
 };
 
 // Forward declarations of functions included in this code module:
@@ -99,9 +128,34 @@ INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 bool InitializeDirectx(HWND hwnd);
 void Render();
 bool CreateGeometry();
-ID3DBlob* CreateShader(const std::string& path, bool isVertexShader);
+ID3DBlob* CreateVertexShader(const std::string& path, ID3D11VertexShader** vertexShader);
+ID3DBlob* CreatePixelShader(const std::string& path, ID3D11PixelShader** pixelShader);
 void CreateInputLayout(ID3DBlob* pCode);
 bool CreateTexture();
+
+bool CreateSphereGeometry();
+void CreateSphereInputLayout(ID3DBlob* pCode);
+
+
+DirectX::XMVECTOR DefaultForward = DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+DirectX::XMVECTOR DefaultRight = DirectX::XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
+DirectX::XMVECTOR camForward = DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+DirectX::XMVECTOR camRight = DirectX::XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
+
+DirectX::XMMATRIX camRotationMatrix;
+DirectX::XMMATRIX groundWorld;
+
+float moveLeftRight = 0.0f;
+float moveBackForward = 0.0f;
+
+float camYaw = 0.0f;
+float camPitch = 0.0f;
+
+DirectX::XMVECTOR camTarget;
+DirectX::XMVECTOR camUp;
+DirectX::XMVECTOR camPosition;
+DirectX::XMMATRIX camView;
+
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     _In_opt_ HINSTANCE hPrevInstance,
@@ -134,15 +188,25 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         return FALSE;
     }
 
+    if (!CreateSphereGeometry())
+    {
+        return FALSE;
+    }
+
     if (!CreateTexture())
     {
         return FALSE;
     }
 
-    ID3DBlob* pVertexShaderCode = CreateShader("VertexShader.vs", true);
-    CreateShader("PixelShader.ps", false);
+    ID3DBlob* pVertexShaderCode = CreateVertexShader("VertexShader.vs", &m_pVertexShader);
+    CreatePixelShader("PixelShader.ps", &m_pPixelShader);
 
     CreateInputLayout(pVertexShaderCode);
+
+    ID3DBlob* pVertexSphereShaderCode = CreateVertexShader("Sphere.vs", &m_pVertexSphereShader);
+    CreatePixelShader("Sphere.ps", &m_pPixelSphereShader);
+
+    CreateSphereInputLayout(pVertexSphereShaderCode);
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_LAB4));
 
@@ -302,8 +366,14 @@ bool CreateTexture()
 
     if (SUCCEEDED(result))
     {
+        const wchar_t* fileNames[6] = {L"cubemap/posx.dds", L"cubemap/negx.dds", L"cubemap/posy.dds", L"cubemap/negy.dds", L"cubemap/posz.dds", L"cubemap/negz.dds"};
+        result = DirectX::CreateDDSCubeTextureFromFile(m_pDevice, fileNames, nullptr, &m_pCubeTextureView);
+    }
+
+    if (SUCCEEDED(result))
+    {
         D3D11_SAMPLER_DESC desc = {};
-        desc.Filter = D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
+        desc.Filter = D3D11_FILTER_ANISOTROPIC;
         desc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
         desc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
         desc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
@@ -445,7 +515,142 @@ bool CreateGeometry()
     return SUCCEEDED(result);
 }
 
-ID3DBlob* CreateShader(const std::string& path, bool isVertexShader)
+bool CreateSphereGeometry()
+{
+    static std::vector<SphereVertex> Vertices;
+
+    static std::vector<UINT16> Indices;
+
+    int stackCount = 20;
+    int sliceCount = 20;
+    float phiStep = M_PI / stackCount;
+    float thetaStep = 2.0f * M_PI / sliceCount;
+    float radius = 0.5f;
+    Vertices.push_back({ 0, radius, 0 });
+
+    for (int i = 1; i < stackCount; i++)
+    {
+        float phi = i * phiStep;
+        for (int j = 0; j <= sliceCount; j++)
+        {
+            float theta = j * thetaStep;
+            Vertices.push_back({ radius * std::sin(phi) * std::cos(theta),
+                                radius * std::cos(phi),
+                                radius * std::sin(phi) * std::sin(theta) });
+        }
+    }
+    Vertices.push_back({ 0, -radius, 0 });
+
+    for (int i = 1; i <= sliceCount; i++) {
+        Indices.push_back(0);
+        Indices.push_back(i + 1);
+        Indices.push_back(i);
+    }
+
+    int baseIndex = 1;
+    int ringVertexCount = sliceCount + 1;
+    for (int i = 0; i < stackCount - 2; i++) {
+        for (int j = 0; j < sliceCount; j++) {
+            Indices.push_back(baseIndex + i * ringVertexCount + j);
+            Indices.push_back(baseIndex + i * ringVertexCount + j + 1);
+            Indices.push_back(baseIndex + (i + 1) * ringVertexCount + j);
+                    
+            Indices.push_back(baseIndex + (i + 1) * ringVertexCount + j);
+            Indices.push_back(baseIndex + i * ringVertexCount + j + 1);
+            Indices.push_back(baseIndex + (i + 1) * ringVertexCount + j + 1);
+        }
+    }
+
+    int southPoleIndex = Vertices.size() - 1;
+    baseIndex = southPoleIndex - ringVertexCount;
+    for (int i = 0; i < sliceCount; i++) {
+        Indices.push_back(southPoleIndex);
+        Indices.push_back(baseIndex + i);
+        Indices.push_back(baseIndex + i + 1);
+    }
+
+    D3D11_SUBRESOURCE_DATA data;
+
+    D3D11_BUFFER_DESC desc = {};
+    desc.ByteWidth = Vertices.size() * sizeof(SphereVertex);
+    desc.Usage = D3D11_USAGE_IMMUTABLE;
+    desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    desc.CPUAccessFlags = 0;
+    desc.MiscFlags = 0;
+    desc.StructureByteStride = 0;
+
+    data.pSysMem = Vertices.data();
+    data.SysMemPitch = Vertices.size() * sizeof(SphereVertex);
+    data.SysMemSlicePitch = 0;
+
+    HRESULT result = m_pDevice->CreateBuffer(&desc, &data, &m_pVertextSphereBuffer);
+
+    if (SUCCEEDED(result))
+    {
+        result = SetResourceName(m_pVertextSphereBuffer, "VertexSphereBuffer");
+    }
+
+    if (SUCCEEDED(result))
+    {
+        desc = {};
+        desc.ByteWidth = Indices.size() * sizeof(UINT16);
+        desc.Usage = D3D11_USAGE_IMMUTABLE;
+        desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+        desc.CPUAccessFlags = 0;
+        desc.MiscFlags = 0;
+        desc.StructureByteStride = 0;
+
+        data.pSysMem = Indices.data();
+        data.SysMemPitch = Indices.size() * sizeof(UINT16);
+        data.SysMemSlicePitch = 0;
+
+        result = m_pDevice->CreateBuffer(&desc, &data, &m_pIndexSphereBuffer);
+    }
+
+    if (SUCCEEDED(result))
+    {
+        result = SetResourceName(m_pIndexSphereBuffer, "IndexSphereBuffer");
+    }
+
+    if (SUCCEEDED(result))
+    {
+        desc = { 0 };
+        desc.ByteWidth = sizeof(GeomBuffer);
+        desc.Usage = D3D11_USAGE_DEFAULT;
+        desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+        desc.CPUAccessFlags = 0;
+        desc.MiscFlags = 0;
+        desc.StructureByteStride = 0;
+
+        result = m_pDevice->CreateBuffer(&desc, NULL, &m_pGeomSphereBuffer);
+    }
+
+    if (SUCCEEDED(result))
+    {
+        result = SetResourceName(m_pGeomSphereBuffer, "GeomSphereBuffer");
+    }
+
+    if (SUCCEEDED(result))
+    {
+        desc = { 0 };
+        desc.ByteWidth = sizeof(SceneBuffer);
+        desc.Usage = D3D11_USAGE_DYNAMIC;
+        desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+        desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+        desc.MiscFlags = 0;
+        desc.StructureByteStride = 0;
+        result = m_pDevice->CreateBuffer(&desc, NULL, &m_pSceneSphereBuffer);
+    }
+
+    if (SUCCEEDED(result))
+    {
+        result = SetResourceName(m_pSceneSphereBuffer, "SceneSphereBuffer");
+    }
+
+    return SUCCEEDED(result);
+}
+
+ID3DBlob* CreateVertexShader(const std::string& path, ID3D11VertexShader** vertexShader)
 {
     std::ifstream file(path);
     std::ostringstream ss;
@@ -456,16 +661,8 @@ ID3DBlob* CreateShader(const std::string& path, bool isVertexShader)
     std::string entryPoint = "";
     std::string platform = "";
 
-    if (isVertexShader)
-    {
-        entryPoint = "vs";
-        platform = "vs_5_0";
-    }
-    else
-    {
-        entryPoint = "ps";
-        platform = "ps_5_0";
-    }
+    entryPoint = "vs";
+    platform = "vs_5_0";
 
     UINT flags = 0;
 #ifdef _DEBUG
@@ -488,21 +685,55 @@ ID3DBlob* CreateShader(const std::string& path, bool isVertexShader)
         pErrMsg = NULL;
     }
 
-    if (isVertexShader)
+    result = m_pDevice->CreateVertexShader(pCode->GetBufferPointer(), pCode->GetBufferSize(), nullptr, vertexShader);
+    if (SUCCEEDED(result))
     {
-        result = m_pDevice->CreateVertexShader(pCode->GetBufferPointer(), pCode->GetBufferSize(), nullptr, &m_pVertexShader);
-        if (SUCCEEDED(result))
-        {
-            result = SetResourceName(m_pVertexShader, path.c_str());
-        }
+        result = SetResourceName(*vertexShader, path.c_str());
     }
-    else
+
+    return pCode;
+}
+
+ID3DBlob* CreatePixelShader(const std::string& path, ID3D11PixelShader** pixelShader)
+{
+    std::ifstream file(path);
+    std::ostringstream ss;
+    ss << file.rdbuf();
+    const std::string& s = ss.str();
+    std::vector<char> data(s.begin(), s.end());
+
+    std::string entryPoint = "";
+    std::string platform = "";
+
+    entryPoint = "ps";
+    platform = "ps_5_0";
+
+
+    UINT flags = 0;
+#ifdef _DEBUG
+    flags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+#endif // _DEBUG
+    ID3DBlob* pCode = nullptr;
+    ID3DBlob* pErrMsg = nullptr;
+
+    HRESULT result = D3DCompile(data.data(), data.size(), path.c_str(), nullptr, nullptr, entryPoint.c_str(),
+        platform.c_str(), flags, 0, &pCode, &pErrMsg);
+
+    if (!SUCCEEDED(result) && pErrMsg != nullptr)
     {
-        result = m_pDevice->CreatePixelShader(pCode->GetBufferPointer(), pCode->GetBufferSize(), nullptr, &m_pPixelShader);
-        if (SUCCEEDED(result))
-        {
-            result = SetResourceName(m_pPixelShader, path.c_str());
-        }
+        OutputDebugStringA((const char*)pErrMsg->GetBufferPointer());
+    }
+    assert(SUCCEEDED(result));
+    if (pErrMsg != NULL)
+    {
+        pErrMsg->Release();
+        pErrMsg = NULL;
+    }
+
+    result = m_pDevice->CreatePixelShader(pCode->GetBufferPointer(), pCode->GetBufferSize(), nullptr, pixelShader);
+    if (SUCCEEDED(result))
+    {
+        result = SetResourceName(*pixelShader, path.c_str());
     }
 
     return pCode;
@@ -522,7 +753,103 @@ void CreateInputLayout(ID3DBlob* pCode)
     }
 }
 
-void Render()
+void CreateSphereInputLayout(ID3DBlob* pCode)
+{
+    static const D3D11_INPUT_ELEMENT_DESC InputDesc[] = {
+        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+    };
+
+    HRESULT result = m_pDevice->CreateInputLayout(InputDesc, 1, pCode->GetBufferPointer(), pCode->GetBufferSize(), &m_pInputSphereLayout);
+    if (SUCCEEDED(result))
+    {
+        result = SetResourceName(m_pInputSphereLayout, "InputSphereLayout");
+    }
+}
+
+void UpdateCamera()
+{
+    camRotationMatrix = DirectX::XMMatrixRotationRollPitchYaw(camPitch, camYaw, 0);
+    camTarget = DirectX::XMVector3TransformCoord(DefaultForward, camRotationMatrix);
+    camTarget = DirectX::XMVector3Normalize(camTarget);
+
+    DirectX::XMMATRIX RotateYTempMatrix;
+    RotateYTempMatrix = DirectX::XMMatrixRotationY(camYaw);
+
+    camRight = DirectX::XMVector3TransformCoord(DefaultRight, RotateYTempMatrix);
+    camUp = DirectX::XMVector3TransformCoord(camUp, RotateYTempMatrix);
+    camForward = DirectX::XMVector3TransformCoord(DefaultForward, RotateYTempMatrix);
+
+    camPosition = DirectX::XMVectorAdd(camPosition, DirectX::XMVectorMultiply(DirectX::XMVectorSet(moveLeftRight, moveLeftRight, moveLeftRight, moveLeftRight), camRight));
+    camPosition = DirectX::XMVectorAdd(camPosition, DirectX::XMVectorMultiply(DirectX::XMVectorSet(moveBackForward, moveBackForward, moveBackForward, moveBackForward), camForward));
+
+    moveLeftRight = 0.0f;
+    moveBackForward = 0.0f;
+
+    camTarget = DirectX::XMVectorAdd(camPosition, camTarget);
+
+    camView = DirectX::XMMatrixLookAtLH(camPosition, camTarget, camUp);
+    
+}
+
+void DrawSphere()
+{
+    GeomBuffer geomBuffer;
+
+    DirectX::XMMATRIX m = DirectX::XMMatrixRotationAxis(DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 1.0f), 0.0f);
+    DirectX::XMMATRIX v = DirectX::XMMatrixInverse(nullptr, DirectX::XMMatrixTranslation(1.0f, 0.3f, -3.0f));
+
+    float f = 100.0f;
+    float n = 0.1f;
+    float fov = (float)M_PI / 3;
+    float c = 1.0f / tanf(fov / 2);
+    float aspectRatio = (float)m_height / m_width;
+    DirectX::XMMATRIX p = DirectX::XMMatrixPerspectiveLH(tanf(fov / 2) * 2 * n, tanf(fov / 2) * 2 * n * aspectRatio, n, f);
+    geomBuffer.modelMatrix = m;
+    m_pDeviceContext->UpdateSubresource(m_pGeomSphereBuffer, 0, nullptr, &geomBuffer, 0, 0);
+
+    D3D11_MAPPED_SUBRESOURCE subresource;
+    HRESULT result = m_pDeviceContext->Map(m_pSceneSphereBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
+    if (SUCCEEDED(result))
+    {
+        SceneBuffer& sceneBuffer = *reinterpret_cast<SceneBuffer*>(subresource.pData);
+        sceneBuffer.vp = DirectX::XMMatrixMultiply(v, p);
+        m_pDeviceContext->Unmap(m_pSceneSphereBuffer, 0);
+    }
+
+    D3D11_VIEWPORT viewport;
+    viewport.TopLeftX = 0;
+    viewport.TopLeftY = 0;
+    viewport.Width = (FLOAT)m_width;
+    viewport.Height = (FLOAT)m_height;
+    viewport.MinDepth = 0.0f;
+    viewport.MaxDepth = 1.0f;
+    m_pDeviceContext->RSSetViewports(1, &viewport);
+
+    D3D11_RECT rect;
+    rect.left = 0;
+    rect.top = 0;
+    rect.right = m_width;
+    rect.bottom = m_height;
+    m_pDeviceContext->RSSetScissorRects(1, &rect);
+
+    m_pDeviceContext->IASetIndexBuffer(m_pIndexSphereBuffer, DXGI_FORMAT_R16_UINT, 0);
+
+    ID3D11Buffer* vertextBuffers[] = { m_pVertextSphereBuffer };
+
+    UINT strides[] = { 12 };
+    UINT offsets[] = { 0 };
+    m_pDeviceContext->IASetVertexBuffers(0, 1, vertextBuffers, strides, offsets);
+    m_pDeviceContext->IASetInputLayout(m_pInputSphereLayout);
+    m_pDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    m_pDeviceContext->VSSetShader(m_pVertexSphereShader, nullptr, 0);
+    m_pDeviceContext->PSSetShader(m_pPixelSphereShader, nullptr, 0);
+    ID3D11Buffer* constBuffers[] = { m_pGeomSphereBuffer, m_pSceneSphereBuffer };
+    m_pDeviceContext->VSSetConstantBuffers(0, 2, constBuffers);
+
+    m_pDeviceContext->DrawIndexed(2280, 0, 0);
+}
+
+void DrawCube()
 {
     size_t usec = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
     static size_t m_usec = usec;
@@ -592,6 +919,12 @@ void Render()
     m_pDeviceContext->PSSetShaderResources(0, 1, resources);
 
     m_pDeviceContext->DrawIndexed(36, 0, 0);
+}
+
+void Render()
+{
+    DrawSphere();
+    DrawCube();
 }
 
 //
