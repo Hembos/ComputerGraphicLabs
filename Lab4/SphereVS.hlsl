@@ -4,30 +4,24 @@ cbuffer GeomBuffer : register (b0)
 	float4 cameraPos;
 };
 
-cbuffer SceneBuffer : register (b1)
-{
-	float4x4 vp;
-};
-
-struct VSInput
+struct VS_INPUT
 {
 	float3 pos : POSITION;
 };
 
-struct VSOutput
+struct VS_OUTPUT
 {
 	float4 pos : SV_POSITION;
 	float3 localPos : POSITION1;
 };
 
-VSOutput vs(VSInput vertex)
+VS_OUTPUT main(VS_INPUT vertex)
 {
-	VSOutput result;
+	VS_OUTPUT result;
 
 	float3 pos = cameraPos.xyz + vertex.pos;
 
-	float4 worldPos = mul(model, float4(pos, 1.0f));
-	result.pos = mul(vp, worldPos);
+	result.pos = mul(float4(pos, 1.0f), model);
 	result.localPos = vertex.pos;
 
 	return result;

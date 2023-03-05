@@ -2150,5 +2150,7 @@ HRESULT DirectX::CreateDDSCubeTextureFromFile(
         hr = d3dDevice->CreateShaderResourceView(cubeTexture, &SMViewDesc, textureView);
     }
 
+    cubeTexture->Release();
+
     return hr;
 }
