@@ -2,14 +2,17 @@
 #include "Keyboard.h"
 #include "Mouse.h"
 
-Engine::Engine(const HINSTANCE& hInstance, const int& width, const int& height, const std::wstring& windowClass, const std::wstring& title)
+Engine& Engine::getInstance()
+{
+    static Engine engine;
+    return engine;
+}
+
+bool Engine::Init(const HINSTANCE& hInstance, const int& width, const int& height, const std::wstring& windowClass, const std::wstring& title, int nCmdShow)
 {
     window = std::make_unique<RenderWindow>(hInstance, width, height, windowClass, title);
     graphics = std::make_unique<Graphics>();
-}
 
-bool Engine::Init(int nCmdShow)
-{
     if (!window->Init(nCmdShow))
     {
         return false;
@@ -79,4 +82,10 @@ void Engine::Update()
 	}
 
     graphics->RenderFrame();
+}
+
+void Engine::WindowResize(const int& width, const int& height)
+{
+    window->Resize(width, height);
+    graphics->Resize(width, height);
 }

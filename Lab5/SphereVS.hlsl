@@ -2,6 +2,7 @@ cbuffer GeomBuffer : register (b0)
 {
 	float4x4 model;
 	float4 cameraPos;
+	float4 radius;
 };
 
 struct VS_INPUT
@@ -19,7 +20,7 @@ VS_OUTPUT main(VS_INPUT vertex)
 {
 	VS_OUTPUT result;
 
-	float3 pos = cameraPos.xyz + vertex.pos;
+	float3 pos = cameraPos.xyz + vertex.pos * radius.x;
 
 	result.pos = mul(float4(pos, 1.0f), model);
 	result.localPos = vertex.pos;

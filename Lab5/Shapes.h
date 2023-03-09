@@ -74,6 +74,7 @@ class Sphere : public Shape
 	{
 		DirectX::XMMATRIX modelMatrix;
 		DirectX::XMVECTOR cameraPos;
+		DirectX::XMVECTOR radius;
 	};
 
 	struct Vertex
@@ -89,9 +90,11 @@ public:
 		ID3D11DeviceContext* m_pDeviceContext) final;
 
 	void setCamPos(DirectX::XMVECTOR camPos);
+	void setRadius(const float& fov, const float& nearPlane, const float& width, const float& height);
 
 private:
 	GeomBuffer geomBuffer;
 	int numIndeces;
 	DirectX::XMVECTOR camPos;
+	float radius;
 };

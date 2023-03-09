@@ -7,7 +7,7 @@ struct PS_INPUT
 	float3 localPos : POSITION1;
 };
 
-float4 main(PS_INPUT pixel) : SV_TARGET
+float4 main(PS_INPUT pixel) : SV_Target0
 {
 	return float4(colorTexture.Sample(colorSampler, pixel.localPos).xyz, 1.0);
 }

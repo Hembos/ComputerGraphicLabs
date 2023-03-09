@@ -93,7 +93,7 @@ bool Graphics::InitDirectX(HWND hwnd, int width, int height)
         swapChainDesc.Windowed = true;
         swapChainDesc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
         swapChainDesc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
-        swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+        swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
         swapChainDesc.Flags = 0;
 
         result = pFactory->CreateSwapChain(m_pDevice, &swapChainDesc, &m_pSwapChain);
@@ -168,13 +168,34 @@ bool Graphics::InitScene()
     camera.SetProjectionValues(100.0f, (float)windowHeight / windowWidth, 0.1f, 1000.0f);
     camera.AdjustRotation(DirectX::XMVectorSet(0.0f, DirectX::XM_PIDIV2, 0.0f, 1.0f));
 
+    sphere.setRadius(camera.GetFov(), camera.GetNearPlane(), windowWidth, windowHeight);
+
     return SUCCEEDED(hr);
 }
 
 void Graphics::RenderFrame()
 {
+    ID3D11RenderTargetView* views[] = { m_pBackBufferRTV };
+    m_pDeviceContext->OMSetRenderTargets(1, views, nullptr);
+
     static const FLOAT BackColor[4] = { 0.25f, 0.25f, 0.25f, 1.0f };
     m_pDeviceContext->ClearRenderTargetView(m_pBackBufferRTV, BackColor);
+
+    D3D11_VIEWPORT viewport;
+    viewport.TopLeftX = 0;
+    viewport.TopLeftY = 0;
+    viewport.Width = (FLOAT)windowWidth;
+    viewport.Height = (FLOAT)windowHeight;
+    viewport.MinDepth = 0.0f;
+    viewport.MaxDepth = 1.0f;
+    m_pDeviceContext->RSSetViewports(1, &viewport);
+
+    D3D11_RECT rect;
+    rect.left = 0;
+    rect.top = 0;
+    rect.right = windowWidth;
+    rect.bottom = windowHeight;
+    m_pDeviceContext->RSSetScissorRects(1, &rect);
 
     m_pDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
@@ -193,4 +214,40 @@ void Graphics::RenderFrame()
 Camera& Graphics::GetCamera()
 {
     return camera;
+}
+
+void Graphics::Resize(const int& width, const int& height)
+{
+    if ((width != windowWidth || height != windowHeight) && m_pSwapChain != nullptr)
+    {
+        if (m_pBackBufferRTV != NULL)
+        {
+            m_pBackBufferRTV->Release();
+            m_pBackBufferRTV = NULL;
+        }
+
+        HRESULT result = m_pSwapChain->ResizeBuffers(2, width, height, DXGI_FORMAT_R8G8B8A8_UNORM, 0);
+        if (SUCCEEDED(result))
+        {
+            windowWidth = width;
+            windowHeight = height;
+
+            ID3D11Texture2D* pBackBuffer = NULL;
+            HRESULT result = m_pSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&pBackBuffer);
+            if (SUCCEEDED(result))
+            {
+                result = m_pDevice->CreateRenderTargetView(pBackBuffer, NULL, &m_pBackBufferRTV);
+
+                if (pBackBuffer != NULL)
+                {
+                    pBackBuffer->Release();
+                    pBackBuffer = NULL;
+                }
+            }
+
+            sphere.setRadius(camera.GetFov(), camera.GetNearPlane(), windowWidth, windowHeight);
+
+            assert(SUCCEEDED(result));
+        }
+    }
 }

@@ -1,6 +1,7 @@
 #include "RenderWindow.h"
 #include "Keyboard.h"
 #include "Mouse.h"
+#include "Engine.h"
 
 RenderWindow::RenderWindow(const HINSTANCE& hInstance, const int& width, const int& height, const std::wstring& windowClass, const std::wstring& title)
     : hInstance(hInstance), width(width), height(height), windowClass(windowClass), title(title)
@@ -86,6 +87,12 @@ int RenderWindow::getHeight()
 	return height;
 }
 
+void RenderWindow::Resize(const int& width, const int& height)
+{
+	this->width = width;
+	this->height = height;
+}
+
 LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	switch (uMsg)
@@ -151,6 +158,17 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			Mouse::getInstance().OnWheelDown(x, y);
 		}
 		return 0;
+	}
+	case WM_SIZE:
+	{
+		RECT rc;
+		GetClientRect(hwnd, &rc);
+		UINT width = rc.right - rc.left;
+		UINT height = rc.bottom - rc.top;
+
+		Engine::getInstance().WindowResize(width, height);
+
+		break;
 	}
 	default:
 		return DefWindowProc(hwnd, uMsg, wParam, lParam);

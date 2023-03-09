@@ -414,6 +414,7 @@ void Sphere::Draw(const DirectX::XMMATRIX& vp, ID3D11DeviceContext* m_pDeviceCon
     geomBuffer.modelMatrix = model * vp;
     geomBuffer.modelMatrix = DirectX::XMMatrixTranspose(geomBuffer.modelMatrix);
     geomBuffer.cameraPos = camPos;
+    geomBuffer.radius = DirectX::XMVectorSet(radius, 0.0f, 0.0f, 0.0f);
     m_pDeviceContext->UpdateSubresource(constBuffers[0], 0, nullptr, &geomBuffer, 0, 0);
 
     m_pDeviceContext->IASetInputLayout(m_pInputLayout);
@@ -441,6 +442,13 @@ void Sphere::Draw(const DirectX::XMMATRIX& vp, ID3D11DeviceContext* m_pDeviceCon
 void Sphere::setCamPos(DirectX::XMVECTOR camPos)
 {
     this->camPos = camPos;
+}
+
+void Sphere::setRadius(const float& fov, const float& nearPlane, const float& width, const float& height)
+{
+    float halfW = tanf(fov / 2) * nearPlane;
+    float halfH = float(height / width) * halfW;
+    radius = sqrtf(nearPlane * nearPlane + halfH * halfH + halfW * halfW) * 1.1f;
 }
 
 HRESULT Shape::setRasterizerState(ID3D11Device* m_pDevice, D3D11_CULL_MODE cullMode)

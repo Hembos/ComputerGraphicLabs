@@ -7,7 +7,7 @@ struct PS_INPUT
 	float2 texCoord : TEXCOORD;
 };
 
-float4 main(PS_INPUT input) : SV_TARGET
+float4 main(PS_INPUT input) : SV_Target0
 {
 	float3 pixelColor = objTexture.Sample(objSamplerState, input.texCoord);
 	return float4(pixelColor, 1.0f);

@@ -23,6 +23,8 @@ public:
 	void RenderFrame();
 
 	Camera& GetCamera();
+
+	void Resize(const int& width, const int& height);
 private:
 	int windowWidth;
 	int windowHeight;

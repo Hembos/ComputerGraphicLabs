@@ -22,6 +22,9 @@ public:
 	const DirectX::XMVECTOR& GetRightVector();
 	const DirectX::XMVECTOR& GetBackwardVector();
 	const DirectX::XMVECTOR& GetLeftVector();
+
+	float GetFov();
+	float GetNearPlane();
 private:
 	void UpdateViewMatrix();
 	DirectX::XMVECTOR posVector;
@@ -40,5 +43,8 @@ private:
 	DirectX::XMVECTOR vec_left;
 	DirectX::XMVECTOR vec_right;
 	DirectX::XMVECTOR vec_backward;
+
+	float fov;
+	float n;
 };
 

@@ -17,6 +17,8 @@ public:
 	int getWidth();
 	int getHeight();
 
+	void Resize(const int& width, const int& height);
+
 private:
 	void RegisterWindowClass();
 
