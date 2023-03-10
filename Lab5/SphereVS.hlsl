@@ -23,6 +23,7 @@ VS_OUTPUT main(VS_INPUT vertex)
 	float3 pos = cameraPos.xyz + vertex.pos * radius.x;
 
 	result.pos = mul(float4(pos, 1.0f), model);
+	result.pos.z = 0.0f;
 	result.localPos = vertex.pos;
 
 	return result;

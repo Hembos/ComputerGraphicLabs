@@ -25,6 +25,8 @@ public:
 	void Translate(DirectX::XMMATRIX translateMatrix);
 	void Scale(DirectX::XMMATRIX scaleMatrix);
 	void Rotate(DirectX::XMMATRIX rotateMatrix);
+
+	void Clean();
 protected:
 	ID3D11Buffer* m_pIndexBuffer = NULL;
 	ID3D11Buffer* m_pVertextBuffer = NULL;
@@ -58,7 +60,6 @@ class Cube : public Shape
 		float u, v;
 	};
 public:
-	void Clean();
 	HRESULT CreateGeometry(ID3D11Device* m_pDevice) final;
 	HRESULT CreateShaders(ID3D11Device* m_pDevice) final;
 	HRESULT CreateTextures(ID3D11Device* m_pDevice) final;
@@ -82,7 +83,6 @@ class Sphere : public Shape
 		float x, y, z;
 	};
 public:
-	void Clean();
 	HRESULT CreateGeometry(ID3D11Device* m_pDevice) final;
 	HRESULT CreateShaders(ID3D11Device* m_pDevice) final;
 	HRESULT CreateTextures(ID3D11Device* m_pDevice) final;
@@ -97,4 +97,30 @@ private:
 	int numIndeces;
 	DirectX::XMVECTOR camPos;
 	float radius;
+};
+
+class Square : public Shape
+{
+	struct GeomBuffer
+	{
+		DirectX::XMMATRIX modelMatrix;
+		DirectX::XMVECTOR color;
+	};
+
+	struct Vertex
+	{
+		float x, y, z;
+	};
+public:
+	HRESULT CreateGeometry(ID3D11Device* m_pDevice) final;
+	HRESULT CreateShaders(ID3D11Device* m_pDevice) final;
+	HRESULT CreateTextures(ID3D11Device* m_pDevice) final;
+	void Draw(const DirectX::XMMATRIX& vp,
+		ID3D11DeviceContext* m_pDeviceContext) final;
+
+	void setColor(DirectX::XMVECTOR color);
+
+private:
+	GeomBuffer geomBuffer;
+	DirectX::XMVECTOR color;
 };

@@ -92,5 +92,7 @@
     <FxCompile Include="SpherePS.hlsl" />
     <FxCompile Include="SphereVS.hlsl" />
     <FxCompile Include="VertexShader.hlsl" />
+    <FxCompile Include="SquarePS.hlsl" />
+    <FxCompile Include="SquareVS.hlsl" />
   </ItemGroup>
 </Project>

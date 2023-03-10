@@ -25,6 +25,9 @@ public:
 	Camera& GetCamera();
 
 	void Resize(const int& width, const int& height);
+
+	HRESULT CreateDepthBuffer();
+	HRESULT CreateBlendState();
 private:
 	int windowWidth;
 	int windowHeight;
@@ -34,8 +37,18 @@ private:
 	IDXGISwapChain* m_pSwapChain = nullptr;
 	ID3D11RenderTargetView* m_pBackBufferRTV = nullptr;
 
+	ID3D11Texture2D* m_pDepthBuffer;
+	ID3D11DepthStencilView* m_pDepthBufferDSV;
+	ID3D11DepthStencilState* m_pDepthState;
+	ID3D11DepthStencilState* m_pDepthTransparentState;
+
+	ID3D11BlendState* m_pTransBlendState;
+
 	Camera camera;
 	Cube cube;
+	Cube cube1;
 	Sphere sphere;
+	Square square;
+	Square square1;
 };
 

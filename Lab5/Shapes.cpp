@@ -4,30 +4,6 @@
 #include <vector>
 #include <math.h>
 
-void Cube::Clean()
-{
-    vs.Clean();
-    ps.Clean();
-    SAFE_RELEASE(m_pIndexBuffer);
-    SAFE_RELEASE(m_pVertextBuffer);
-    for (auto& buf : constBuffers)
-    {
-        SAFE_RELEASE(buf);
-    }
-    for (auto& res : resources)
-    {
-        SAFE_RELEASE(res);
-    }
-    for (auto& sampler : samplers)
-    {
-        SAFE_RELEASE(sampler);
-    }
-    SAFE_RELEASE(m_pInputLayout);
-    SAFE_RELEASE(m_pIndexBuffer);
-    SAFE_RELEASE(m_pIndexBuffer);
-    SAFE_RELEASE(rasterizerState);
-}
-
 HRESULT Cube::CreateGeometry(ID3D11Device* m_pDevice)
 {
     static const Vertex v[] = {
@@ -211,30 +187,6 @@ void Cube::Draw(const DirectX::XMMATRIX& vp, ID3D11DeviceContext* m_pDeviceConte
     m_pDeviceContext->IASetVertexBuffers(0, 1, &m_pVertextBuffer, &stride, &offset);
 
     m_pDeviceContext->DrawIndexed(36, 0, 0);
-}
-
-void Sphere::Clean()
-{
-    vs.Clean();
-    ps.Clean();
-    SAFE_RELEASE(m_pIndexBuffer);
-    SAFE_RELEASE(m_pVertextBuffer);
-    for (auto& buf : constBuffers)
-    {
-        SAFE_RELEASE(buf);
-    }
-    for (auto& res : resources)
-    {
-        SAFE_RELEASE(res);
-    }
-    for (auto& sampler : samplers)
-    {
-        SAFE_RELEASE(sampler);
-    }
-    SAFE_RELEASE(m_pInputLayout);
-    SAFE_RELEASE(m_pIndexBuffer);
-    SAFE_RELEASE(m_pIndexBuffer);
-    SAFE_RELEASE(rasterizerState);
 }
 
 HRESULT Sphere::CreateGeometry(ID3D11Device* m_pDevice)
@@ -477,4 +429,153 @@ void Shape::Scale(DirectX::XMMATRIX scaleMatrix)
 void Shape::Rotate(DirectX::XMMATRIX rotateMatrix)
 {
     this->rotateMatrix = rotateMatrix;
+}
+
+void Shape::Clean()
+{
+    vs.Clean();
+    ps.Clean();
+    SAFE_RELEASE(m_pIndexBuffer);
+    SAFE_RELEASE(m_pVertextBuffer);
+    for (auto& buf : constBuffers)
+    {
+        SAFE_RELEASE(buf);
+    }
+    for (auto& res : resources)
+    {
+        SAFE_RELEASE(res);
+    }
+    for (auto& sampler : samplers)
+    {
+        SAFE_RELEASE(sampler);
+    }
+    SAFE_RELEASE(m_pInputLayout);
+    SAFE_RELEASE(m_pIndexBuffer);
+    SAFE_RELEASE(m_pIndexBuffer);
+    SAFE_RELEASE(rasterizerState);
+}
+
+HRESULT Square::CreateGeometry(ID3D11Device* m_pDevice)
+{
+    static const Vertex v[] = {
+        {-0.5, -0.5, 0.5},
+        {0.5, -0.5, 0.5},
+        {0.5, -0.5, -0.5},
+        {-0.5, -0.5, -0.5},
+    };
+
+    static const DWORD Indices[] = {
+        0, 2, 1, 0, 3, 2,
+    };
+
+    D3D11_BUFFER_DESC desc;
+    ZeroMemory(&desc, sizeof(desc));
+
+    desc.Usage = D3D11_USAGE_DEFAULT;
+    desc.ByteWidth = sizeof(Vertex) * ARRAYSIZE(v);
+    desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    desc.CPUAccessFlags = 0;
+    desc.MiscFlags = 0;
+
+    D3D11_SUBRESOURCE_DATA data;
+    ZeroMemory(&data, sizeof(data));
+    data.pSysMem = v;
+
+    HRESULT hr = m_pDevice->CreateBuffer(&desc, &data, &m_pVertextBuffer);
+
+    if (SUCCEEDED(hr))
+    {
+        desc = {};
+        desc.ByteWidth = sizeof(DWORD) * ARRAYSIZE(Indices);
+        desc.Usage = D3D11_USAGE_IMMUTABLE;
+        desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+        desc.CPUAccessFlags = 0;
+        desc.MiscFlags = 0;
+        desc.StructureByteStride = 0;
+
+        data.pSysMem = &Indices;
+        data.SysMemPitch = sizeof(Indices);
+        data.SysMemSlicePitch = 0;
+
+        hr = m_pDevice->CreateBuffer(&desc, &data, &m_pIndexBuffer);
+    }
+
+    ID3D11Buffer* m_pGeomBuffer;
+
+    if (SUCCEEDED(hr))
+    {
+        desc = { 0 };
+        desc.ByteWidth = sizeof(GeomBuffer);
+        desc.Usage = D3D11_USAGE_DEFAULT;
+        desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+        desc.CPUAccessFlags = 0;
+        desc.MiscFlags = 0;
+        desc.StructureByteStride = 0;
+
+        hr = m_pDevice->CreateBuffer(&desc, NULL, &m_pGeomBuffer);
+    }
+
+    if (SUCCEEDED(hr))
+    {
+        constBuffers.push_back(m_pGeomBuffer);
+    }
+
+    return hr;
+}
+
+HRESULT Square::CreateShaders(ID3D11Device* m_pDevice)
+{
+    static const D3D11_INPUT_ELEMENT_DESC InputDesc[] = {
+        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+    };
+
+    if (!vs.Initialize(m_pDevice, L"SquareVS.cso"))
+    {
+        return S_FALSE;
+    }
+
+    HRESULT result = m_pDevice->CreateInputLayout(InputDesc, ARRAYSIZE(InputDesc), vs.GetBuffer()->GetBufferPointer(), vs.GetBuffer()->GetBufferSize(), &m_pInputLayout);
+
+    if (!ps.Initialize(m_pDevice, L"SquarePS.cso"))
+    {
+        return S_FALSE;
+    }
+
+    return result;
+}
+
+HRESULT Square::CreateTextures(ID3D11Device* m_pDevice)
+{
+    return E_NOTIMPL;
+}
+
+void Square::Draw(const DirectX::XMMATRIX& vp, ID3D11DeviceContext* m_pDeviceContext)
+{
+    m_pDeviceContext->RSSetState(rasterizerState);
+
+    model = DirectX::XMMatrixIdentity();
+    model = rotateMatrix * scaleMatrix * translateMatrix;
+    geomBuffer.modelMatrix = model * vp;
+    geomBuffer.modelMatrix = DirectX::XMMatrixTranspose(geomBuffer.modelMatrix);
+    geomBuffer.color = color;
+    m_pDeviceContext->UpdateSubresource(constBuffers[0], 0, nullptr, &geomBuffer, 0, 0);
+
+    m_pDeviceContext->IASetInputLayout(m_pInputLayout);
+
+    m_pDeviceContext->VSSetShader(vs.GetShader(), NULL, 0);
+    m_pDeviceContext->PSSetShader(ps.GetShader(), NULL, 0);
+
+    m_pDeviceContext->VSSetConstantBuffers(0, 1, constBuffers.data());
+
+    m_pDeviceContext->IASetIndexBuffer(m_pIndexBuffer, DXGI_FORMAT_R32_UINT, 0);
+    UINT stride = sizeof(Vertex);
+    UINT offset = 0;
+    m_pDeviceContext->IASetVertexBuffers(0, 1, &m_pVertextBuffer, &stride, &offset);
+
+    m_pDeviceContext->DrawIndexed(6, 0, 0);
+}
+
+void Square::setColor(DirectX::XMVECTOR color)
+{
+    this->color = color;
 }

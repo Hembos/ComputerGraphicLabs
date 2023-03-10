@@ -9,11 +9,18 @@
 Graphics::~Graphics()
 {
     cube.Clean();
+    cube1.Clean();
     sphere.Clean();
+    square.Clean();
+    square1.Clean();
     SAFE_RELEASE(m_pBackBufferRTV);
     SAFE_RELEASE(m_pSwapChain);
     SAFE_RELEASE(m_pDeviceContext);
-    //SAFE_RELEASE(m_pDevice);
+    SAFE_RELEASE(m_pDepthBuffer);
+    SAFE_RELEASE(m_pDepthBufferDSV);
+    SAFE_RELEASE(m_pDepthState);
+    SAFE_RELEASE(m_pDepthTransparentState);
+    SAFE_RELEASE(m_pTransBlendState);
 
     ID3D11Debug* d3Debug = nullptr;
     m_pDevice->QueryInterface(IID_PPV_ARGS(&d3Debug));
@@ -111,8 +118,18 @@ bool Graphics::InitDirectX(HWND hwnd, int width, int height)
         }
     }
 
+    if (SUCCEEDED(result))
+    {
+        result = CreateDepthBuffer();
+    }
+
+    if (SUCCEEDED(result))
+    {
+        result = CreateBlendState();
+    }
+
     ID3D11RenderTargetView* views[] = { m_pBackBufferRTV };
-    m_pDeviceContext->OMSetRenderTargets(1, views, nullptr);
+    m_pDeviceContext->OMSetRenderTargets(1, views, m_pDepthBufferDSV);
 
     D3D11_VIEWPORT viewport;
     viewport.TopLeftX = 0;
@@ -126,10 +143,16 @@ bool Graphics::InitDirectX(HWND hwnd, int width, int height)
     if (SUCCEEDED(result))
     {
         result = cube.setRasterizerState(m_pDevice, D3D11_CULL_MODE::D3D11_CULL_BACK);
+        result = cube1.setRasterizerState(m_pDevice, D3D11_CULL_MODE::D3D11_CULL_BACK);
         result = sphere.setRasterizerState(m_pDevice, D3D11_CULL_MODE::D3D11_CULL_FRONT);
     }
+    if (SUCCEEDED(result))
+        result = square.setRasterizerState(m_pDevice, D3D11_CULL_MODE::D3D11_CULL_NONE);
+    if (SUCCEEDED(result))
+        result = square1.setRasterizerState(m_pDevice, D3D11_CULL_MODE::D3D11_CULL_NONE);
 
     cube.CreateTextures(m_pDevice);
+    cube1.CreateTextures(m_pDevice);
     sphere.CreateTextures(m_pDevice);
     
     SAFE_RELEASE(pSelectedAdapter);
@@ -146,6 +169,9 @@ HRESULT SetResourceName(ID3D11DeviceChild* pResource, const std::string name)
 bool Graphics::InitShaders()
 {
     HRESULT result = cube.CreateShaders(m_pDevice);
+    result = cube1.CreateShaders(m_pDevice);
+    result = square.CreateShaders(m_pDevice);
+    result = square1.CreateShaders(m_pDevice);
 
     if (SUCCEEDED(result))
     {
@@ -158,6 +184,9 @@ bool Graphics::InitShaders()
 bool Graphics::InitScene()
 {
     HRESULT hr = cube.CreateGeometry(m_pDevice);
+    hr = cube1.CreateGeometry(m_pDevice);
+    hr = square.CreateGeometry(m_pDevice);
+    hr = square1.CreateGeometry(m_pDevice);
 
     if (SUCCEEDED(hr))
     {
@@ -165,21 +194,27 @@ bool Graphics::InitScene()
     }
 
     camera.SetPosition(DirectX::XMVectorSet(-2.0f, 0.0f, 0.0f, 0.0));
-    camera.SetProjectionValues(100.0f, (float)windowHeight / windowWidth, 0.1f, 1000.0f);
+    camera.SetProjectionValues(100.0f, (float)windowHeight / windowWidth, 0.1f, 100.0f);
     camera.AdjustRotation(DirectX::XMVectorSet(0.0f, DirectX::XM_PIDIV2, 0.0f, 1.0f));
 
     sphere.setRadius(camera.GetFov(), camera.GetNearPlane(), windowWidth, windowHeight);
+    
+    square.setColor(DirectX::XMVectorSet(1.0f, 0.0f, 1.0f, 0.5f));
+    square1.setColor(DirectX::XMVectorSet(0.0f, 1.0f, 0.5f, 0.5f));
 
     return SUCCEEDED(hr);
 }
 
 void Graphics::RenderFrame()
 {
+    m_pDeviceContext->ClearState();
+
     ID3D11RenderTargetView* views[] = { m_pBackBufferRTV };
-    m_pDeviceContext->OMSetRenderTargets(1, views, nullptr);
+    m_pDeviceContext->OMSetRenderTargets(1, views, m_pDepthBufferDSV);
 
     static const FLOAT BackColor[4] = { 0.25f, 0.25f, 0.25f, 1.0f };
     m_pDeviceContext->ClearRenderTargetView(m_pBackBufferRTV, BackColor);
+    m_pDeviceContext->ClearDepthStencilView(m_pDepthBufferDSV, D3D11_CLEAR_DEPTH, 0.0f, 0);
 
     D3D11_VIEWPORT viewport;
     viewport.TopLeftX = 0;
@@ -197,15 +232,28 @@ void Graphics::RenderFrame()
     rect.bottom = windowHeight;
     m_pDeviceContext->RSSetScissorRects(1, &rect);
 
+    m_pDeviceContext->OMSetDepthStencilState(m_pDepthState, 0);
+
     m_pDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
     DirectX::XMMATRIX vp = camera.GetViewMatrix()* camera.GetProjectionMatrix();
-    cube.Translate(DirectX::XMMatrixTranslation(1.0f, 0.0f, 0.0f));
+    cube.Translate(DirectX::XMMatrixTranslation(0.0f, 0.0f, 1.7f));
 
     sphere.setCamPos(camera.GetPositionVector());
 
-    sphere.Draw(vp, m_pDeviceContext);
+    square.Rotate(DirectX::XMMatrixRotationX(DirectX::XM_PIDIV2));
+    square.Translate(DirectX::XMMatrixTranslation(0.0f, 0.0f, 1.5f));
+    square1.Rotate(DirectX::XMMatrixRotationX(DirectX::XM_PIDIV2));
+    square1.Translate(DirectX::XMMatrixTranslation(0.0f, 0.0f, 1.3f));
+
     cube.Draw(vp, m_pDeviceContext);
+    cube1.Draw(vp, m_pDeviceContext);
+    m_pDeviceContext->OMSetDepthStencilState(m_pDepthTransparentState, 0);
+    sphere.Draw(vp, m_pDeviceContext);
+    
+    m_pDeviceContext->OMSetBlendState(m_pTransBlendState, nullptr, 0xFFFFFFFF);
+    square.Draw(vp, m_pDeviceContext);
+    square1.Draw(vp, m_pDeviceContext);
 
     HRESULT result = m_pSwapChain->Present(0, 0);
     assert(SUCCEEDED(result));
@@ -224,6 +272,12 @@ void Graphics::Resize(const int& width, const int& height)
         {
             m_pBackBufferRTV->Release();
             m_pBackBufferRTV = NULL;
+        }
+
+        if (m_pDepthBufferDSV!= NULL)
+        {
+            m_pDepthBufferDSV->Release();
+            m_pDepthBufferDSV = NULL;
         }
 
         HRESULT result = m_pSwapChain->ResizeBuffers(2, width, height, DXGI_FORMAT_R8G8B8A8_UNORM, 0);
@@ -249,5 +303,74 @@ void Graphics::Resize(const int& width, const int& height)
 
             assert(SUCCEEDED(result));
         }
+
+        if (SUCCEEDED(result))
+        {
+            CreateDepthBuffer();
+        }
     }
+}
+
+HRESULT Graphics::CreateDepthBuffer()
+{
+    HRESULT result;
+
+    D3D11_TEXTURE2D_DESC desc;
+
+    desc.Format = DXGI_FORMAT_D32_FLOAT;
+    desc.ArraySize = 1;
+    desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+    desc.CPUAccessFlags = 0;
+    desc.MiscFlags = 0;
+    desc.SampleDesc.Count = 1;
+    desc.SampleDesc.Quality = 0;
+    desc.Usage = D3D11_USAGE_DEFAULT;
+    desc.Height = windowHeight;
+    desc.Width = windowWidth;
+    desc.MipLevels = 1;
+
+    result = m_pDevice->CreateTexture2D(&desc, nullptr, &m_pDepthBuffer);
+    if (SUCCEEDED(result))
+    {
+        result = m_pDevice->CreateDepthStencilView(m_pDepthBuffer, nullptr, &m_pDepthBufferDSV);
+        SAFE_RELEASE(m_pDepthBuffer);
+    }
+
+    if (SUCCEEDED(result))
+    {
+        D3D11_DEPTH_STENCIL_DESC desc = {};
+        desc.DepthEnable = TRUE;
+        desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+        desc.DepthFunc = D3D11_COMPARISON_GREATER;
+        desc.StencilEnable = FALSE;
+
+        result = m_pDevice->CreateDepthStencilState(&desc, &m_pDepthState);
+
+        desc.DepthFunc = D3D11_COMPARISON_GREATER_EQUAL;
+        desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+        result = m_pDevice->CreateDepthStencilState(&desc, &m_pDepthTransparentState);
+    }
+
+    return result;
+}
+
+HRESULT Graphics::CreateBlendState()
+{
+    D3D11_BLEND_DESC desc = {};
+
+    desc.AlphaToCoverageEnable = false;
+    desc.IndependentBlendEnable = false;
+    desc.RenderTarget[0].BlendEnable = true;
+    desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+    desc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+    desc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+    desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_RED |
+        D3D11_COLOR_WRITE_ENABLE_GREEN | D3D11_COLOR_WRITE_ENABLE_BLUE;
+    desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+    desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ONE;
+    desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ZERO;
+
+    HRESULT result = m_pDevice->CreateBlendState(&desc, &m_pTransBlendState);
+
+    return result;
 }

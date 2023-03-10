@@ -14,7 +14,7 @@ void Camera::SetProjectionValues(float fovDegrees, float aspectRatio, float near
 	float fovRadians = (fovDegrees / 360.0f) * XM_2PI;
 	fov = fovRadians;
 	n = nearZ;
-	projectionMatrix = XMMatrixPerspectiveFovLH(fovRadians, aspectRatio, nearZ, farZ);
+	projectionMatrix = XMMatrixPerspectiveFovLH(fovRadians, aspectRatio, farZ, nearZ);
 }
 
 const DirectX::XMMATRIX& Camera::GetViewMatrix() const
