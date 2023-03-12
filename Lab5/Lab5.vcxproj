@@ -181,8 +181,8 @@
     </Link>
     <PostBuildEvent>
       <Command>xcopy  $(ProjectDir)cubemap  $(OutDir)cubemap /I
-xcopy  $(ProjectDir)cat.dds $(OutDir) /y
-xcopy  $(OutDir)*.cso $(ProjectDir) /y</Command>
+xcopy  $(ProjectDir)cat.dds $(OutDir) /h /i /c /k /e /r /y
+xcopy  $(OutDir)*.cso $(ProjectDir) /h /i /c /k /e /r /y</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
