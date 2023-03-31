@@ -79,6 +79,26 @@ HRESULT Cube::CreateGeometry(ID3D11Device* m_pDevice)
         hr = m_pDevice->CreateBuffer(&desc, &data, &m_pIndexBuffer);
     }
 
+    ID3D11Buffer* m_pSceneBuffer;
+
+    if (SUCCEEDED(hr))
+    {
+        desc = { 0 };
+        desc.ByteWidth = sizeof(SceneBuffer);
+        desc.Usage = D3D11_USAGE_DEFAULT;
+        desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+        desc.CPUAccessFlags = 0;
+        desc.MiscFlags = 0;
+        desc.StructureByteStride = 0;
+
+        hr = m_pDevice->CreateBuffer(&desc, NULL, &m_pSceneBuffer);
+    }
+
+    if (SUCCEEDED(hr))
+    {
+        constBuffers.push_back(m_pSceneBuffer);
+    }
+
     ID3D11Buffer* m_pGeomBuffer;
 
     if (SUCCEEDED(hr))
@@ -163,16 +183,19 @@ void Cube::Draw(const DirectX::XMMATRIX& vp, ID3D11DeviceContext* m_pDeviceConte
 
     model = DirectX::XMMatrixIdentity();
     model = rotateMatrix * scaleMatrix * translateMatrix;
-    geomBuffer.modelMatrix = model * vp;
+    geomBuffer.modelMatrix = model;
     geomBuffer.modelMatrix = DirectX::XMMatrixTranspose(geomBuffer.modelMatrix);
-    m_pDeviceContext->UpdateSubresource(constBuffers[0], 0, nullptr, &geomBuffer, 0, 0);
+    scBuffer.vp = vp;
+    scBuffer.vp = DirectX::XMMatrixTranspose(scBuffer.vp);
+    m_pDeviceContext->UpdateSubresource(constBuffers[0], 0, nullptr, &scBuffer, 0, 0);
+    m_pDeviceContext->UpdateSubresource(constBuffers[1], 0, nullptr, &geomBuffer, 0, 0);
 
     m_pDeviceContext->IASetInputLayout(m_pInputLayout);
 
     m_pDeviceContext->VSSetShader(vs.GetShader(), NULL, 0);
     m_pDeviceContext->PSSetShader(ps.GetShader(), NULL, 0);
 
-    m_pDeviceContext->VSSetConstantBuffers(0, 1, constBuffers.data());
+    m_pDeviceContext->VSSetConstantBuffers(0, 2, constBuffers.data());
 
     if (!samplers.empty() && !resources.empty())
     {
@@ -278,6 +301,26 @@ HRESULT Sphere::CreateGeometry(ID3D11Device* m_pDevice)
         result = m_pDevice->CreateBuffer(&desc, &data, &m_pIndexBuffer);
     }
 
+    ID3D11Buffer* m_pSceneBuffer;
+
+    if (SUCCEEDED(result))
+    {
+        desc = { 0 };
+        desc.ByteWidth = sizeof(SceneBuffer);
+        desc.Usage = D3D11_USAGE_DEFAULT;
+        desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+        desc.CPUAccessFlags = 0;
+        desc.MiscFlags = 0;
+        desc.StructureByteStride = 0;
+
+        result = m_pDevice->CreateBuffer(&desc, NULL, &m_pSceneBuffer);
+    }
+
+    if (SUCCEEDED(result))
+    {
+        constBuffers.push_back(m_pSceneBuffer);
+    }
+
     ID3D11Buffer* m_pGeomBuffer;
 
     if (SUCCEEDED(result))
@@ -363,18 +406,21 @@ void Sphere::Draw(const DirectX::XMMATRIX& vp, ID3D11DeviceContext* m_pDeviceCon
 
     model = DirectX::XMMatrixIdentity();
     model = scaleMatrix;
-    geomBuffer.modelMatrix = model * vp;
+    geomBuffer.modelMatrix = model;
     geomBuffer.modelMatrix = DirectX::XMMatrixTranspose(geomBuffer.modelMatrix);
     geomBuffer.cameraPos = camPos;
     geomBuffer.radius = DirectX::XMVectorSet(radius, 0.0f, 0.0f, 0.0f);
-    m_pDeviceContext->UpdateSubresource(constBuffers[0], 0, nullptr, &geomBuffer, 0, 0);
+    scBuffer.vp = vp;
+    scBuffer.vp = DirectX::XMMatrixTranspose(scBuffer.vp);
+    m_pDeviceContext->UpdateSubresource(constBuffers[0], 0, nullptr, &scBuffer, 0, 0);
+    m_pDeviceContext->UpdateSubresource(constBuffers[1], 0, nullptr, &geomBuffer, 0, 0);
 
     m_pDeviceContext->IASetInputLayout(m_pInputLayout);
 
     m_pDeviceContext->VSSetShader(vs.GetShader(), NULL, 0);
     m_pDeviceContext->PSSetShader(ps.GetShader(), NULL, 0);
 
-    m_pDeviceContext->VSSetConstantBuffers(0, 1, constBuffers.data());
+    m_pDeviceContext->VSSetConstantBuffers(0, 2, constBuffers.data());
 
     if (!samplers.empty() && !resources.empty())
     {
@@ -500,6 +546,26 @@ HRESULT Square::CreateGeometry(ID3D11Device* m_pDevice)
         hr = m_pDevice->CreateBuffer(&desc, &data, &m_pIndexBuffer);
     }
 
+    ID3D11Buffer* m_pSceneBuffer;
+
+    if (SUCCEEDED(hr))
+    {
+        desc = { 0 };
+        desc.ByteWidth = sizeof(SceneBuffer);
+        desc.Usage = D3D11_USAGE_DEFAULT;
+        desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+        desc.CPUAccessFlags = 0;
+        desc.MiscFlags = 0;
+        desc.StructureByteStride = 0;
+
+        hr = m_pDevice->CreateBuffer(&desc, NULL, &m_pSceneBuffer);
+    }
+
+    if (SUCCEEDED(hr))
+    {
+        constBuffers.push_back(m_pSceneBuffer);
+    }
+
     ID3D11Buffer* m_pGeomBuffer;
 
     if (SUCCEEDED(hr))
@@ -555,17 +621,20 @@ void Square::Draw(const DirectX::XMMATRIX& vp, ID3D11DeviceContext* m_pDeviceCon
 
     model = DirectX::XMMatrixIdentity();
     model = rotateMatrix * scaleMatrix * translateMatrix;
-    geomBuffer.modelMatrix = model * vp;
+    geomBuffer.modelMatrix = model;
     geomBuffer.modelMatrix = DirectX::XMMatrixTranspose(geomBuffer.modelMatrix);
     geomBuffer.color = color;
-    m_pDeviceContext->UpdateSubresource(constBuffers[0], 0, nullptr, &geomBuffer, 0, 0);
+    scBuffer.vp = vp;
+    scBuffer.vp = DirectX::XMMatrixTranspose(scBuffer.vp);
+    m_pDeviceContext->UpdateSubresource(constBuffers[0], 0, nullptr, &scBuffer, 0, 0);
+    m_pDeviceContext->UpdateSubresource(constBuffers[1], 0, nullptr, &geomBuffer, 0, 0);
 
     m_pDeviceContext->IASetInputLayout(m_pInputLayout);
 
     m_pDeviceContext->VSSetShader(vs.GetShader(), NULL, 0);
     m_pDeviceContext->PSSetShader(ps.GetShader(), NULL, 0);
 
-    m_pDeviceContext->VSSetConstantBuffers(0, 1, constBuffers.data());
+    m_pDeviceContext->VSSetConstantBuffers(0, 2, constBuffers.data());
 
     m_pDeviceContext->IASetIndexBuffer(m_pIndexBuffer, DXGI_FORMAT_R32_UINT, 0);
     UINT stride = sizeof(Vertex);

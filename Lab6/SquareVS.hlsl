@@ -1,4 +1,6 @@
-cbuffer GeomBuffer : register (b0)
+#include "SceneBuffer.hlsli"
+
+cbuffer GeomBuffer : register (b1)
 {
 	float4x4 model;
 	float4 color;
@@ -18,7 +20,8 @@ struct VS_OUTPUT
 VS_OUTPUT main(VS_INPUT input)
 {
 	VS_OUTPUT output;
-	output.pos = mul(float4(input.pos, 1.0f), model);
+	float4x4 world = mul(model, vp);
+	output.pos = mul(float4(input.pos, 1.0f), world);
 	output.color = color;
 	return output;
 }

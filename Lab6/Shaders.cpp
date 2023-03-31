@@ -14,8 +14,9 @@ bool VertexShader::Initialize(ID3D11Device* device, std::wstring shaderpath)
 	ShaderInclude include;
 	ID3DBlob* pErrMsg = nullptr;
 	HRESULT hr = D3DCompileFromFile(shaderpath.c_str(), NULL, &include, "main", "vs_5_0", NULL, NULL, &shaderBuffer, &pErrMsg);
-	if (!SUCCEEDED(hr))
+	if (!SUCCEEDED(hr) && pErrMsg != nullptr)
 	{
+		OutputDebugStringA((const char*)pErrMsg->GetBufferPointer());
 		return false;
 	}
 
@@ -75,31 +76,23 @@ ID3D10Blob* PixelShader::GetBuffer()
 
 HRESULT ShaderInclude::Open(D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID* ppData, UINT* pBytes)
 {
-	std::wstring filePath(pFileName, pFileName + strlen(pFileName));
-	if (IncludeType != D3D_INCLUDE_LOCAL)
-		return E_FAIL;
+	std::ifstream file(pFileName, std::ios::binary | std::ios::in);
 
-	std::ifstream file(filePath, std::ios::in | std::ios::binary);
-
-	std::vector<char> buffer;
-
-	file.seekg(0, file.end);
+	file.seekg(0, std::ios::end);
 	size_t length = file.tellg();
-	file.seekg(0, file.beg);
+	file.seekg(0, std::ios::beg);
 
-	if (length > 0) 
-	{
-		buffer.resize(length);
-		file.read(&buffer[0], length);
-	}
+	char* buffer = new char[length + 1];
 
-	*pBytes = length;
-	*ppData = static_cast<void*>(buffer.data());
+	file.read(buffer, length);
+
+	*ppData = buffer;
+	*pBytes = (UINT)length;
 	return S_OK;
 }
 
 HRESULT ShaderInclude::Close(LPCVOID pData)
 {
-	std::free(const_cast<void*>(pData));
+	delete pData;
 	return S_OK;
 }

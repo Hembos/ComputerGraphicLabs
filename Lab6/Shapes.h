@@ -13,6 +13,11 @@
 
 class Shape
 {
+protected:
+	struct SceneBuffer
+	{
+		DirectX::XMMATRIX vp;
+	};
 public:
 	virtual HRESULT CreateGeometry(ID3D11Device* m_pDevice) = 0;
 	virtual HRESULT CreateShaders(ID3D11Device* m_pDevice) = 0;
@@ -45,6 +50,8 @@ protected:
 	DirectX::XMMATRIX translateMatrix = DirectX::XMMatrixTranslation(0.0f, 0.0f, 0.0f);
 	DirectX::XMMATRIX scaleMatrix = DirectX::XMMatrixScaling(1.0f, 1.0f, 1.0f);
 	DirectX::XMMATRIX rotateMatrix = DirectX::XMMatrixRotationAxis(DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), 0.0f);
+
+	SceneBuffer scBuffer;
 };
 
 class Cube : public Shape

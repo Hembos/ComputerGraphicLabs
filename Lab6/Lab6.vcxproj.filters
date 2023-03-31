@@ -143,4 +143,7 @@
     <FxCompile Include="SquareVS.hlsl" />
     <FxCompile Include="VertexShader.hlsl" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="SceneBuffer.hlsli" />
+  </ItemGroup>
 </Project>
