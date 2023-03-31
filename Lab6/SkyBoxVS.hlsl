@@ -1,4 +1,4 @@
-#include "SceneBuffer.hlsli"
+#include "Scene.hlsli"
 
 cbuffer GeomBuffer : register (b1)
 {
@@ -23,8 +23,8 @@ VS_OUTPUT main(VS_INPUT vertex)
 	VS_OUTPUT result;
 
 	float3 pos = cameraPos.xyz + vertex.pos * radius.x;
-	float4x4 world = mul(model, vp);
-	result.pos = mul(float4(pos, 1.0f), world);
+	float4 world = mul(float4(pos, 1.0f), model);
+	result.pos = mul(world, vp);
 	result.pos.z = 0.0f;
 	result.localPos = vertex.pos;
 

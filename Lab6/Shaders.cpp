@@ -9,11 +9,11 @@ void VertexShader::Clean()
 	SAFE_RELEASE(shaderBuffer);
 }
 
-bool VertexShader::Initialize(ID3D11Device* device, std::wstring shaderpath)
+bool VertexShader::Initialize(ID3D11Device* device, std::wstring shaderpath, D3D_SHADER_MACRO* defines)
 {
 	ShaderInclude include;
 	ID3DBlob* pErrMsg = nullptr;
-	HRESULT hr = D3DCompileFromFile(shaderpath.c_str(), NULL, &include, "main", "vs_5_0", NULL, NULL, &shaderBuffer, &pErrMsg);
+	HRESULT hr = D3DCompileFromFile(shaderpath.c_str(), defines, &include, "main", "vs_5_0", NULL, NULL, &shaderBuffer, &pErrMsg);
 	if (!SUCCEEDED(hr) && pErrMsg != nullptr)
 	{
 		OutputDebugStringA((const char*)pErrMsg->GetBufferPointer());
@@ -45,11 +45,11 @@ void PixelShader::Clean()
 	SAFE_RELEASE(shaderBuffer);
 }
 
-bool PixelShader::Initialize(ID3D11Device* device, std::wstring shaderpath)
+bool PixelShader::Initialize(ID3D11Device* device, std::wstring shaderpath, D3D_SHADER_MACRO* defines)
 {
 	ShaderInclude include;
 	ID3DBlob* pErrMsg = nullptr;
-	HRESULT hr = D3DCompileFromFile(shaderpath.c_str(), NULL, &include, "main", "ps_5_0", NULL, NULL, &shaderBuffer, &pErrMsg);
+	HRESULT hr = D3DCompileFromFile(shaderpath.c_str(), defines, &include, "main", "ps_5_0", NULL, NULL, &shaderBuffer, &pErrMsg);
 	if (!SUCCEEDED(hr) && pErrMsg != nullptr)
 	{
 		return false;

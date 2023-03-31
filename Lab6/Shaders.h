@@ -13,7 +13,7 @@ class VertexShader
 {
 public:
 	void Clean();
-	bool Initialize(ID3D11Device* device, std::wstring shaderpath);
+	bool Initialize(ID3D11Device* device, std::wstring shaderpath, D3D_SHADER_MACRO* defines);
 	ID3D11VertexShader* GetShader();
 	ID3D10Blob* GetBuffer();
 private:
@@ -25,7 +25,7 @@ class PixelShader
 {
 public:
 	void Clean();
-	bool Initialize(ID3D11Device* device, std::wstring shaderpath);
+	bool Initialize(ID3D11Device* device, std::wstring shaderpath, D3D_SHADER_MACRO* defines);
 	ID3D11PixelShader* GetShader();
 	ID3D10Blob* GetBuffer();
 private:

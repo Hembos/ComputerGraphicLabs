@@ -75,6 +75,12 @@
     <ClCompile Include="ImGui\imgui_widgets.cpp">
       <Filter>Source Files\ImGUI</Filter>
     </ClCompile>
+    <ClCompile Include="Light.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SkyBox.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h">
@@ -134,16 +140,21 @@
     <ClInclude Include="ImGui\imstb_truetype.h">
       <Filter>Header Files\ImGUI</Filter>
     </ClInclude>
+    <ClInclude Include="Light.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SkyBox.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="PixelShader.hlsl" />
-    <FxCompile Include="SpherePS.hlsl" />
-    <FxCompile Include="SphereVS.hlsl" />
-    <FxCompile Include="SquarePS.hlsl" />
-    <FxCompile Include="SquareVS.hlsl" />
-    <FxCompile Include="VertexShader.hlsl" />
+    <FxCompile Include="SkyBoxPS.hlsl" />
+    <FxCompile Include="SkyBoxVS.hlsl" />
+    <FxCompile Include="ShapeVS.hlsl" />
+    <FxCompile Include="ShapePS.hlsl" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="SceneBuffer.hlsli" />
+    <None Include="Scene.hlsli" />
+    <None Include="Light.hlsli" />
   </ItemGroup>
 </Project>

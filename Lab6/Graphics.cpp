@@ -10,9 +10,10 @@ Graphics::~Graphics()
 {
     cube.Clean();
     cube1.Clean();
-    sphere.Clean();
+    skyBox.Clean();
     square.Clean();
     square1.Clean();
+    light.Clean();
     SAFE_RELEASE(m_pBackBufferRTV);
     SAFE_RELEASE(m_pSwapChain);
     SAFE_RELEASE(m_pDeviceContext);
@@ -34,7 +35,7 @@ Graphics::~Graphics()
         d3Debug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
     }
 
-    d3Debug->Release();
+    SAFE_RELEASE(d3Debug);
 }
 
 bool Graphics::InitDirectX(HWND hwnd, int width, int height)
@@ -147,7 +148,7 @@ bool Graphics::InitDirectX(HWND hwnd, int width, int height)
     {
         result = cube.setRasterizerState(m_pDevice, D3D11_CULL_MODE::D3D11_CULL_BACK);
         result = cube1.setRasterizerState(m_pDevice, D3D11_CULL_MODE::D3D11_CULL_BACK);
-        result = sphere.setRasterizerState(m_pDevice, D3D11_CULL_MODE::D3D11_CULL_FRONT);
+        result = skyBox.setRasterizerState(m_pDevice, D3D11_CULL_MODE::D3D11_CULL_FRONT);
     }
     if (SUCCEEDED(result))
         result = square.setRasterizerState(m_pDevice, D3D11_CULL_MODE::D3D11_CULL_NONE);
@@ -156,7 +157,7 @@ bool Graphics::InitDirectX(HWND hwnd, int width, int height)
 
     cube.CreateTextures(m_pDevice);
     cube1.CreateTextures(m_pDevice);
-    sphere.CreateTextures(m_pDevice);
+    skyBox.CreateTextures(m_pDevice);
     
     SAFE_RELEASE(pSelectedAdapter);
     SAFE_RELEASE(pFactory);
@@ -175,10 +176,11 @@ bool Graphics::InitShaders()
     result = cube1.CreateShaders(m_pDevice);
     result = square.CreateShaders(m_pDevice);
     result = square1.CreateShaders(m_pDevice);
+    result = light.createBuffer(m_pDevice);
 
     if (SUCCEEDED(result))
     {
-        result = sphere.CreateShaders(m_pDevice);
+        result = skyBox.CreateShaders(m_pDevice);
     }
 
     return SUCCEEDED(result);
@@ -193,17 +195,21 @@ bool Graphics::InitScene()
 
     if (SUCCEEDED(hr))
     {
-        hr = sphere.CreateGeometry(m_pDevice);
+        hr = skyBox.CreateGeometry(m_pDevice);
     }
 
     camera.SetPosition(DirectX::XMVectorSet(-2.0f, 0.0f, 0.0f, 0.0));
     camera.SetProjectionValues(100.0f, (float)windowHeight / windowWidth, 0.1f, 100.0f);
     camera.AdjustRotation(DirectX::XMVectorSet(0.0f, DirectX::XM_PIDIV2, 0.0f, 1.0f));
 
-    sphere.setRadius(camera.GetFov(), camera.GetNearPlane(), windowWidth, windowHeight);
+    skyBox.setRadius(camera.GetFov(), camera.GetNearPlane(), windowWidth, windowHeight);
     
     square.setColor(DirectX::XMVectorSet(1.0f, 0.0f, 1.0f, 0.5f));
     square1.setColor(DirectX::XMVectorSet(0.0f, 1.0f, 0.5f, 0.5f));
+
+    light.setAmbient(0.5f, 0.5f, 0.5f, 0.5f);
+
+    light.addLight(m_pDevice, m_pDeviceContext);
 
     return SUCCEEDED(hr);
 }
@@ -252,41 +258,43 @@ void Graphics::RenderFrame()
     DirectX::XMMATRIX vp = camera.GetViewMatrix()* camera.GetProjectionMatrix();
     cube.Translate(DirectX::XMMatrixTranslation(0.0f, 0.0f, 1.7f));
 
-    sphere.setCamPos(camera.GetPositionVector());
+    skyBox.setCamPos(camera.GetPositionVector());
 
     square.Rotate(DirectX::XMMatrixRotationX(DirectX::XM_PIDIV2));
     square.Translate(DirectX::XMMatrixTranslation(0.0f, 0.0f, 1.5f));
     square1.Rotate(DirectX::XMMatrixRotationX(DirectX::XM_PIDIV2));
     square1.Translate(DirectX::XMMatrixTranslation(0.0f, 0.0f, 1.3f));
 
+    light.updateBuffer(m_pDeviceContext);
     cube.Draw(vp, m_pDeviceContext);
     cube1.Draw(vp, m_pDeviceContext);
+    light.Draw(vp, m_pDeviceContext);
     m_pDeviceContext->OMSetDepthStencilState(m_pDepthTransparentState, 0);
-    sphere.Draw(vp, m_pDeviceContext);
+    skyBox.Draw(vp, m_pDeviceContext);
     
     m_pDeviceContext->OMSetBlendState(m_pTransBlendState, nullptr, 0xFFFFFFFF);
     square.Draw(vp, m_pDeviceContext);
     square1.Draw(vp, m_pDeviceContext);
 
-    RenderImGUI();
+    light.RenderImGUI(m_pDevice, m_pDeviceContext);
 
     HRESULT result = m_pSwapChain->Present(0, 0);
     assert(SUCCEEDED(result));
 }
 
-void Graphics::RenderImGUI()
-{
-    ImGui_ImplWin32_NewFrame();
-    ImGui_ImplDX11_NewFrame();
-    ImGui::NewFrame();
-
-    ImGui::Begin("Test");
-    ImGui::End();
-
-    ImGui::Render();
-
-    ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-}
+//void Graphics::RenderImGUI()
+//{
+//    ImGui_ImplWin32_NewFrame();
+//    ImGui_ImplDX11_NewFrame();
+//    ImGui::NewFrame();
+//
+//    ImGui::Begin("Test");
+//    ImGui::End();
+//
+//    ImGui::Render();
+//
+//    ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+//}
 
 Camera& Graphics::GetCamera()
 {
@@ -328,7 +336,7 @@ void Graphics::Resize(const int& width, const int& height)
                 }
             }
 
-            sphere.setRadius(camera.GetFov(), camera.GetNearPlane(), windowWidth, windowHeight);
+            skyBox.setRadius(camera.GetFov(), camera.GetNearPlane(), windowWidth, windowHeight);
 
             assert(SUCCEEDED(result));
         }

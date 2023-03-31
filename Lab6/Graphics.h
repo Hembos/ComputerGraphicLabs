@@ -2,6 +2,8 @@
 
 #include "Camera.h"
 #include "Shapes.h"
+#include "Light.h"
+#include "SkyBox.h"
 
 #include <d3d11.h>
 #include <dxgi.h>
@@ -27,7 +29,7 @@ public:
 	void InitImGUI(HWND hwnd);
 
 	void RenderFrame();
-	void RenderImGUI();
+	//void RenderImGUI();
 
 	Camera& GetCamera();
 
@@ -54,8 +56,9 @@ private:
 	Camera camera;
 	Cube cube;
 	Cube cube1;
-	Sphere sphere;
+	SkyBox skyBox;
 	Square square;
 	Square square1;
+	Light light;
 };
 
