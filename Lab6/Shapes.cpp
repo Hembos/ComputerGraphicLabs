@@ -7,35 +7,35 @@
 HRESULT Cube::CreateGeometry(ID3D11Device* m_pDevice)
 {
     static const Vertex v[] = {
-        {-0.5, -0.5,  0.5,  0.0f,  -1.0f, 0.0f, 0, 1},
-        { 0.5, -0.5,  0.5,  0.0f,  -1.0f, 0.0f, 1, 1},
-        { 0.5, -0.5, -0.5,  0.0f,  -1.0f, 0.0f, 1, 0},
-        {-0.5, -0.5, -0.5,  0.0f,  -1.0f, 0.0f, 0, 0},
+        {-0.5, -0.5,  0.5, 1, 0, 0,  0.0f,  -1.0f, 0.0f, 0, 1},
+        { 0.5, -0.5,  0.5, 1, 0, 0, 0.0f,  -1.0f, 0.0f, 1, 1},
+        { 0.5, -0.5, -0.5, 1, 0, 0, 0.0f,  -1.0f, 0.0f, 1, 0},
+        {-0.5, -0.5, -0.5, 1, 0, 0, 0.0f,  -1.0f, 0.0f, 0, 0},
 
-        {-0.5,  0.5, -0.5, 0.0f, 1.0f, 0.0f, 0, 1},
-        { 0.5,  0.5, -0.5, 0.0f, 1.0f, 0.0f, 1, 1},
-        { 0.5,  0.5,  0.5, 0.0f, 1.0f, 0.0f, 1, 0},
-        {-0.5,  0.5,  0.5, 0.0f, 1.0f, 0.0f, 0, 0},
+        {-0.5,  0.5, -0.5, 1, 0, 0, 0.0f, 1.0f, 0.0f, 0, 1},
+        { 0.5,  0.5, -0.5, 1, 0, 0, 0.0f, 1.0f, 0.0f, 1, 1},
+        { 0.5,  0.5,  0.5, 1, 0, 0, 0.0f, 1.0f, 0.0f, 1, 0},
+        {-0.5,  0.5,  0.5, 1, 0, 0, 0.0f, 1.0f, 0.0f, 0, 0},
 
-        { 0.5, -0.5, -0.5, 1.0f,  0.0f,  0.0f, 0, 1},
-        { 0.5, -0.5,  0.5, 1.0f,  0.0f,  0.0f, 1, 1},
-        { 0.5,  0.5,  0.5, 1.0f,  0.0f,  0.0f, 1, 0},
-        { 0.5,  0.5, -0.5, 1.0f,  0.0f,  0.0f, 0, 0},
+        { 0.5, -0.5, -0.5, 0, 0, 1, 1.0f,  0.0f,  0.0f, 0, 1},
+        { 0.5, -0.5,  0.5, 0, 0, 1, 1.0f,  0.0f,  0.0f, 1, 1},
+        { 0.5,  0.5,  0.5, 0, 0, 1, 1.0f,  0.0f,  0.0f, 1, 0},
+        { 0.5,  0.5, -0.5, 0, 0, 1, 1.0f,  0.0f,  0.0f, 0, 0},
 
-        {-0.5, -0.5,  0.5, -1.0f,  0.0f,  0.0f, 0, 1},
-        {-0.5, -0.5, -0.5, -1.0f,  0.0f,  0.0f, 1, 1},
-        {-0.5,  0.5, -0.5, -1.0f,  0.0f,  0.0f, 1, 0},
-        {-0.5,  0.5,  0.5, -1.0f,  0.0f,  0.0f, 0, 0},
+        {-0.5, -0.5,  0.5, 0, 0, -1, -1.0f,  0.0f,  0.0f, 0, 1},
+        {-0.5, -0.5, -0.5, 0, 0, -1, -1.0f,  0.0f,  0.0f, 1, 1},
+        {-0.5,  0.5, -0.5, 0, 0, -1, -1.0f,  0.0f,  0.0f, 1, 0},
+        {-0.5,  0.5,  0.5, 0, 0, -1, -1.0f,  0.0f,  0.0f, 0, 0},
 
-        { 0.5, -0.5,  0.5, 0.0f, 0.0f, 1.0f, 0, 1},
-        {-0.5, -0.5,  0.5, 0.0f, 0.0f, 1.0f, 1, 1},
-        {-0.5,  0.5,  0.5, 0.0f, 0.0f, 1.0f, 1, 0},
-        { 0.5,  0.5,  0.5, 0.0f, 0.0f, 1.0f, 0, 0},
+        { 0.5, -0.5,  0.5, -1, 0, 0, 0.0f, 0.0f, 1.0f, 0, 1},
+        {-0.5, -0.5,  0.5, -1, 0, 0, 0.0f, 0.0f, 1.0f, 1, 1},
+        {-0.5,  0.5,  0.5, -1, 0, 0, 0.0f, 0.0f, 1.0f, 1, 0},
+        { 0.5,  0.5,  0.5, -1, 0, 0, 0.0f, 0.0f, 1.0f, 0, 0},
 
-        {-0.5, -0.5, -0.5, 0.0f, 0.0f, -1.0f, 0, 1},
-        { 0.5, -0.5, -0.5, 0.0f, 0.0f, -1.0f, 1, 1},
-        { 0.5,  0.5, -0.5, 0.0f, 0.0f, -1.0f, 1, 0},
-        {-0.5,  0.5, -0.5, 0.0f, 0.0f, -1.0f, 0, 0},
+        {-0.5, -0.5, -0.5, 1, 0, 0, 0.0f, 0.0f, -1.0f, 0, 1},
+        { 0.5, -0.5, -0.5, 1, 0, 0, 0.0f, 0.0f, -1.0f, 1, 1},
+        { 0.5,  0.5, -0.5, 1, 0, 0, 0.0f, 0.0f, -1.0f, 1, 0},
+        {-0.5,  0.5, -0.5, 1, 0, 0, 0.0f, 0.0f, -1.0f, 0, 0},
     };
 
     static const DWORD Indices[] = {
@@ -124,12 +124,13 @@ HRESULT Cube::CreateGeometry(ID3D11Device* m_pDevice)
 
 HRESULT Cube::CreateShaders(ID3D11Device* m_pDevice)
 {
-    static const D3D11_INPUT_ELEMENT_DESC InputDesc[] = {
+    static const D3D11_INPUT_ELEMENT_DESC InputDesc[] = { 
         { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-        { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-        { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+        { "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 36, D3D11_INPUT_PER_VERTEX_DATA, 0 }
     };
-    D3D_SHADER_MACRO defines[] = { "USE_TEXTURE", "1", "APPLY_LIGHT", "1", NULL, NULL};
+    D3D_SHADER_MACRO defines[] = { "USE_TEXTURE", "1", "APPLY_LIGHT", "1", "USE_NORMAL_MAP", "1", NULL, NULL};
     if (!vs.Initialize(m_pDevice, L"ShapeVS.hlsl", defines))
     {
         return S_FALSE;
@@ -170,6 +171,15 @@ HRESULT Cube::CreateTextures(ID3D11Device* m_pDevice)
         result = m_pDevice->CreateSamplerState(&desc, &m_pSampler);
     }
 
+    ID3D11ShaderResourceView* m_pTextureView1;
+
+    result = DirectX::CreateDDSTextureFromFile(m_pDevice, L"textureWithNormalMap/breaks_norm.dds", nullptr, &m_pTextureView1);
+
+    if (SUCCEEDED(result))
+    {
+        resources.push_back(m_pTextureView1);
+    }
+
     if (SUCCEEDED(result))
     {
         samplers.push_back(m_pSampler);
@@ -202,7 +212,7 @@ void Cube::Draw(const DirectX::XMMATRIX& vp, ID3D11DeviceContext* m_pDeviceConte
     {
         m_pDeviceContext->PSSetSamplers(0, 1, samplers.data());
 
-        m_pDeviceContext->PSSetShaderResources(0, 1, resources.data());
+        m_pDeviceContext->PSSetShaderResources(0, 2, resources.data());
     }
     
     m_pDeviceContext->IASetIndexBuffer(m_pIndexBuffer, DXGI_FORMAT_R32_UINT, 0);

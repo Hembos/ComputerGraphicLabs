@@ -65,6 +65,7 @@ class Cube : public Shape
 	struct Vertex
 	{
 		float x, y, z;
+		float tx, ty, tz;
 		float nx, ny, nz;
 		float u, v;
 	};

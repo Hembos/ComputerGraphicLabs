@@ -1,5 +1,9 @@
 #include "Light.hlsli"
 
+#ifdef USE_NORMAL_MAP
+	Texture2D normalMapTexture : TEXTURE: register(t1);
+#endif
+
 #ifdef USE_TEXTURE
 	Texture2D objTexture : TEXTURE: register(t0);
 	SamplerState objSamplerState : SAMPLER: register(s0);
@@ -13,6 +17,9 @@
 struct PS_INPUT
 {
 	float4 pos : SV_POSITION;
+#ifdef USE_NORMAL_MAP
+	float3 tang : TANGENT;
+#endif
 #ifdef APPLY_LIGHT
 	float3 normal : NORMAL;
 	float4 worldPos : POSITION;
@@ -33,7 +40,15 @@ float4 main(PS_INPUT input) : SV_Target0
 	float4 finalColor = pixelColor;
 	
 #ifdef APPLY_LIGHT
-	float3 norm = normalize(input.normal);
+
+#ifdef USE_NORMAL_MAP
+	float3 binorm = normalize(cross(input.normal, input.tang));
+	float3 localNorm = normalMapTexture.Sample(objSamplerState, input.texCoord).xyz * 2.0 - float3(1.0, 1.0, 1.0);
+	float3 norm = localNorm.x * normalize(input.tang) + localNorm.y * binorm + localNorm.z * normalize(input.normal);
+#else
+	float3 norm = normalize(pixel.norm);
+#endif
+
 	float3 lightColor = applyLight(norm, input.worldPos.xyz);
 	finalColor = float4(finalColor.xyz * lightColor, finalColor[3]);
 
