@@ -51,8 +51,11 @@ void Light::RenderImGUI(ID3D11Device* device, ID3D11DeviceContext* m_pDeviceCont
 
     for (int i = 0; i < lightsShapes.size(); i++)
     {
-        std::string title = "LightPos" + std::to_string(i);
-        ImGui::DragFloat3(title.c_str(), lightsShapes[i].pos, 0.01f);
+        ImGui::DragFloat("Diffuse coefficient", &light.diffuseCoef, 0.01f);
+        std::string title = "Light " + std::to_string(i);
+        ImGui::Text(title.c_str());
+        std::string posTitle = "Pos" + std::to_string(i);
+        ImGui::DragFloat3(posTitle.c_str(), light.lightsDesc[i].pos, 0.01f);
     }
 
     ImGui::End();
@@ -70,23 +73,35 @@ void Light::addLight(ID3D11Device* device, ID3D11DeviceContext* m_pDeviceContext
     sphere.CreateShaders(device);
     sphere.CreateGeometry(device);
     sphere.setColor(DirectX::XMVectorSet(1.0f, 1.0f, 1.0f, 1.0f));
-    sphere.Scale(DirectX::XMMatrixScaling(0.2f, 0.2f, 0.2f));
+    sphere.Scale(DirectX::XMMatrixScaling(0.1f, 0.1f, 0.1f));
 
     PointLight pointLight;
-    pointLight.sphere = sphere;
-    pointLight.pos[0] = 2.0f;
+    pointLight.pos[0] = 0.0f;
     pointLight.pos[1] = 2.0f;
     pointLight.pos[2] = 0.0f;
+    pointLight.pos[3] = 1.0f;
 
-    lightsShapes.push_back(pointLight);
+    pointLight.color[0] = 1.0f;
+    pointLight.color[1] = 1.0f;
+    pointLight.color[2] = 1.0f;
+    pointLight.color[3] = 1.0f;
+
+    light.lightsDesc[lightsShapes.size()] = pointLight;
+
+    lightsShapes.push_back(sphere);
+
+    light.lightsCount = lightsShapes.size();
+    light.diffuseCoef = 0.5f;
+    light.shine = 0.5f;
+    light.specularCoef = 0.5f;
 }
 
 void Light::Draw(const DirectX::XMMATRIX& vp, ID3D11DeviceContext* m_pDeviceContext)
 {
-    for (auto& lightShape : lightsShapes)
+    for (int i = 0; i < lightsShapes.size(); i++)
     {
-        lightShape.sphere.Translate(DirectX::XMMatrixTranslation(lightShape.pos[0], lightShape.pos[1], lightShape.pos[2]));
-        lightShape.sphere.Draw(vp, m_pDeviceContext);
+        lightsShapes[i].Translate(DirectX::XMMatrixTranslation(light.lightsDesc[i].pos[0], light.lightsDesc[i].pos[1], light.lightsDesc[i].pos[2]));
+        lightsShapes[i].Draw(vp, m_pDeviceContext);
     }
 }
 
@@ -95,6 +110,6 @@ void Light::Clean()
     SAFE_RELEASE(lightBuffer);
     for (auto& lightShape : lightsShapes)
     {
-        lightShape.sphere.Clean();
+        lightShape.Clean();
     }
 }

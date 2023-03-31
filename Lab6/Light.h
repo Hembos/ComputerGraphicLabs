@@ -16,13 +16,18 @@ class Light
 {
 	struct PointLight
 	{
-		float pos[3];
-		Sphere sphere;
+		float pos[4];
+		float color[4];
 	};
 
 	struct LightBuffer
 	{
+		PointLight lightsDesc[10];
 		float ambientColor[4]; // (r,g,b,a): a - intensity, rgb - color
+		int lightsCount;
+		float diffuseCoef;
+		float specularCoef;
+		float shine;
 	};
 public:
 	Light() = default;
@@ -41,6 +46,6 @@ private:
 	LightBuffer light;
 	ID3D11Buffer* lightBuffer;
 	
-	std::vector<PointLight> lightsShapes;
+	std::vector<Sphere> lightsShapes;
 };
 

@@ -52,6 +52,7 @@ bool PixelShader::Initialize(ID3D11Device* device, std::wstring shaderpath, D3D_
 	HRESULT hr = D3DCompileFromFile(shaderpath.c_str(), defines, &include, "main", "ps_5_0", NULL, NULL, &shaderBuffer, &pErrMsg);
 	if (!SUCCEEDED(hr) && pErrMsg != nullptr)
 	{
+		OutputDebugStringA((const char*)pErrMsg->GetBufferPointer());
 		return false;
 	}
 
