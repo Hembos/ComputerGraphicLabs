@@ -4,7 +4,7 @@
 	Texture2D objTexture : TEXTURE: register(t0);
 	SamplerState objSamplerState : SAMPLER: register(s0);
 #else
-	cbuffer ColorBuffer : register (b1)
+	cbuffer ColorBuffer : register (b2)
 	{
 		float4 color;
 	};
@@ -36,20 +36,6 @@ float4 main(PS_INPUT input) : SV_Target0
 	float3 norm = normalize(input.normal);
 	float3 lightColor = applyLight(norm, input.worldPos.xyz);
 	finalColor = float4(finalColor.xyz * lightColor, finalColor[3]);
-	/*float3 ambientColor = ambient.xyz * ambient[3];
-	finalColor = float4(finalColor.xyz * ambientColor, finalColor[3]);
-	float3 norm = normalize(input.normal);
-
-	for (int i = 0; i < lightsCount; i++)
-	{
-		float3 lightDir = lights[i].pos.xyz - input.worldPos.xyz;
-		float lightDist = length(lightDir);
-		lightDir /= lightDist;
-
-		float atten = clamp(1.0 / (lightDist * lightDist), 0, 1);
-
-		finalColor += float4(pixelColor * max(dot(lightDir, norm), 0) * atten * lights[i].color.xyz * diffusionCoef, finalColor[3]);
-	}*/
 
 #endif
 

@@ -259,6 +259,7 @@ void Graphics::RenderFrame()
     cube.Translate(DirectX::XMMatrixTranslation(0.0f, 0.0f, 1.7f));
 
     skyBox.setCamPos(camera.GetPositionVector());
+    light.setCamPos(camera.GetPositionVector());
 
     square.Rotate(DirectX::XMMatrixRotationX(DirectX::XM_PIDIV2));
     square.Translate(DirectX::XMMatrixTranslation(0.0f, 0.0f, 1.5f));

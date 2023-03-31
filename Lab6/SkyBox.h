@@ -7,7 +7,6 @@ class SkyBox : public Shape
 	struct GeomBuffer
 	{
 		DirectX::XMMATRIX modelMatrix;
-		DirectX::XMVECTOR cameraPos;
 		DirectX::XMVECTOR radius;
 	};
 

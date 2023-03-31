@@ -17,7 +17,7 @@ protected:
 	struct SceneBuffer
 	{
 		DirectX::XMMATRIX vp;
-		float ambientColor[4]; // (r,g,b,a): a - intensity, rgb - color
+		DirectX::XMVECTOR cameraPos;
 	};
 public:
 	virtual HRESULT CreateGeometry(ID3D11Device* m_pDevice) = 0;

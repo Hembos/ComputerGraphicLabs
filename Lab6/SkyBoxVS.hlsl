@@ -3,7 +3,6 @@
 cbuffer GeomBuffer : register (b1)
 {
 	float4x4 model;
-	float4 cameraPos;
 	float4 radius;
 };
 

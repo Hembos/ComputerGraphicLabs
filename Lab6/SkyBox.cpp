@@ -196,10 +196,10 @@ void SkyBox::Draw(const DirectX::XMMATRIX& vp, ID3D11DeviceContext* m_pDeviceCon
     model = scaleMatrix;
     geomBuffer.modelMatrix = model;
     geomBuffer.modelMatrix = DirectX::XMMatrixTranspose(geomBuffer.modelMatrix);
-    geomBuffer.cameraPos = camPos;
     geomBuffer.radius = DirectX::XMVectorSet(radius, 0.0f, 0.0f, 0.0f);
     scBuffer.vp = vp;
     scBuffer.vp = DirectX::XMMatrixTranspose(scBuffer.vp);
+    scBuffer.cameraPos = camPos;
     m_pDeviceContext->UpdateSubresource(constBuffers[0], 0, nullptr, &scBuffer, 0, 0);
     m_pDeviceContext->UpdateSubresource(constBuffers[1], 0, nullptr, &geomBuffer, 0, 0);
 

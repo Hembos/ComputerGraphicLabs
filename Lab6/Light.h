@@ -20,6 +20,12 @@ class Light
 		float color[4];
 	};
 
+	struct SceneBuffer
+	{
+		DirectX::XMMATRIX vp;
+		DirectX::XMVECTOR cameraPos;
+	};
+
 	struct LightBuffer
 	{
 		PointLight lightsDesc[10];
@@ -41,10 +47,15 @@ public:
 	void Draw(const DirectX::XMMATRIX& vp,
 		ID3D11DeviceContext* m_pDeviceContext);
 
+	void setCamPos(DirectX::XMVECTOR camPos);
+
 	void Clean();
 private:
 	LightBuffer light;
 	ID3D11Buffer* lightBuffer;
+
+	SceneBuffer scBuffer;
+	ID3D11Buffer* sceneBuffer;
 	
 	std::vector<Sphere> lightsShapes;
 };

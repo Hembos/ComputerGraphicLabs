@@ -419,7 +419,7 @@ void Square::Draw(const DirectX::XMMATRIX& vp, ID3D11DeviceContext* m_pDeviceCon
     m_pDeviceContext->PSSetShader(ps.GetShader(), NULL, 0);
 
     m_pDeviceContext->VSSetConstantBuffers(0, 2, constBuffers.data());
-    m_pDeviceContext->PSSetConstantBuffers(1, 1, &constBuffers[2]);
+    m_pDeviceContext->PSSetConstantBuffers(2, 1, &constBuffers[2]);
 
     m_pDeviceContext->IASetIndexBuffer(m_pIndexBuffer, DXGI_FORMAT_R32_UINT, 0);
     UINT stride = sizeof(Vertex);
@@ -632,7 +632,7 @@ void Sphere::Draw(const DirectX::XMMATRIX& vp,
     m_pDeviceContext->PSSetShader(ps.GetShader(), NULL, 0);
 
     m_pDeviceContext->VSSetConstantBuffers(0, 2, constBuffers.data());
-    m_pDeviceContext->PSSetConstantBuffers(1, 1, &constBuffers[2]);
+    m_pDeviceContext->PSSetConstantBuffers(2, 1, &constBuffers[2]);
 
     if (!samplers.empty() && !resources.empty())
     {
