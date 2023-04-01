@@ -37,6 +37,8 @@ public:
 
 	HRESULT CreateDepthBuffer();
 	HRESULT CreateBlendState();
+
+	void RenderImGUI();
 private:
 	int windowWidth;
 	int windowHeight;
@@ -55,10 +57,10 @@ private:
 
 	Camera camera;
 	Cube cube;
-	Cube cube1;
-	SkyBox skyBox;
-	Square square;
-	Square square1;
-	Light light;
+	//Cube cube1;
+	//SkyBox skyBox;
+	//Square square;
+	//Square square1;
+	//Light light;
 };
 

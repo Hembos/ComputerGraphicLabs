@@ -92,7 +92,7 @@ void Light::addLight(ID3D11Device* device, ID3D11DeviceContext* m_pDeviceContext
     sphere.CreateShaders(device);
     sphere.CreateGeometry(device);
     sphere.setColor(DirectX::XMVectorSet(1.0f, 1.0f, 1.0f, 1.0f));
-    sphere.Scale(DirectX::XMMatrixScaling(0.1f, 0.1f, 0.1f));
+    //sphere.Scale(DirectX::XMMatrixScaling(0.1f, 0.1f, 0.1f));
 
     PointLight pointLight;
     pointLight.pos[0] = 0.0f;
@@ -119,7 +119,7 @@ void Light::Draw(const DirectX::XMMATRIX& vp, ID3D11DeviceContext* m_pDeviceCont
 {
     for (int i = 0; i < lightsShapes.size(); i++)
     {
-        lightsShapes[i].Translate(DirectX::XMMatrixTranslation(light.lightsDesc[i].pos[0], light.lightsDesc[i].pos[1], light.lightsDesc[i].pos[2]));
+        //lightsShapes[i].Translate(DirectX::XMMatrixTranslation(light.lightsDesc[i].pos[0], light.lightsDesc[i].pos[1], light.lightsDesc[i].pos[2]));
         lightsShapes[i].setColor(DirectX::XMVectorSet(light.lightsDesc[i].color[0], light.lightsDesc[i].color[1], light.lightsDesc[i].color[2], 1.0f));
         lightsShapes[i].Draw(vp, m_pDeviceContext);
     }

@@ -17,6 +17,7 @@
 struct PS_INPUT
 {
 	float4 pos : SV_POSITION;
+	nointerpolation uint instanceId : INST_ID;
 #ifdef USE_NORMAL_MAP
 	float3 tang : TANGENT;
 #endif

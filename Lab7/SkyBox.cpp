@@ -190,7 +190,7 @@ HRESULT SkyBox::CreateTextures(ID3D11Device* m_pDevice)
 
 void SkyBox::Draw(const DirectX::XMMATRIX& vp, ID3D11DeviceContext* m_pDeviceContext)
 {
-    m_pDeviceContext->RSSetState(rasterizerState);
+    /*m_pDeviceContext->RSSetState(rasterizerState);
 
     model = DirectX::XMMatrixIdentity();
     model = scaleMatrix;
@@ -222,7 +222,7 @@ void SkyBox::Draw(const DirectX::XMMATRIX& vp, ID3D11DeviceContext* m_pDeviceCon
     UINT offset = 0;
     m_pDeviceContext->IASetVertexBuffers(0, 1, &m_pVertextBuffer, &stride, &offset);
 
-    m_pDeviceContext->DrawIndexed(numIndeces, 0, 0);
+    m_pDeviceContext->DrawIndexed(numIndeces, 0, 0);*/
 }
 
 void SkyBox::setCamPos(DirectX::XMVECTOR camPos)

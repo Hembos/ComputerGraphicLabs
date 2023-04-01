@@ -27,10 +27,14 @@ public:
 						ID3D11DeviceContext* m_pDeviceContext) = 0;
 
 	virtual HRESULT setRasterizerState(ID3D11Device* m_pDevice, D3D11_CULL_MODE cullMode);
+	virtual void addInstance() {};
 
-	void Translate(DirectX::XMMATRIX translateMatrix);
-	void Scale(DirectX::XMMATRIX scaleMatrix);
-	void Rotate(DirectX::XMMATRIX rotateMatrix);
+	void Translate(DirectX::XMMATRIX translateMatrix, int ind);
+	void Scale(DirectX::XMMATRIX scaleMatrix, int ind);
+	void Rotate(DirectX::XMMATRIX rotateMatrix, int ind);
+
+	void setMaxInstanceNum(int num);
+	int getMaxInstanceNum();
 
 	void Clean();
 protected:
@@ -47,12 +51,14 @@ protected:
 	std::vector<ID3D11SamplerState*> samplers;
 	std::vector<ID3D11ShaderResourceView*> resources;
 
-	DirectX::XMMATRIX model = DirectX::XMMatrixIdentity();
-	DirectX::XMMATRIX translateMatrix = DirectX::XMMatrixTranslation(0.0f, 0.0f, 0.0f);
-	DirectX::XMMATRIX scaleMatrix = DirectX::XMMatrixScaling(1.0f, 1.0f, 1.0f);
-	DirectX::XMMATRIX rotateMatrix = DirectX::XMMatrixRotationAxis(DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), 0.0f);
+	std::vector<DirectX::XMMATRIX> translateMatrices;
+	std::vector<DirectX::XMMATRIX> scaleMatrices;
+	std::vector<DirectX::XMMATRIX> rotateMatrices;
 
 	SceneBuffer scBuffer;
+
+	int maxInstancesNum = 100;
+	int numInstances = 0;
 };
 
 class Cube : public Shape
@@ -60,7 +66,7 @@ class Cube : public Shape
 	struct GeomBuffer
 	{
 		DirectX::XMMATRIX modelMatrix;
-		DirectX::XMMATRIX normalTransform;
+		//DirectX::XMMATRIX normalTransform;
 	};
 
 	struct Vertex
@@ -76,8 +82,12 @@ public:
 	HRESULT CreateTextures(ID3D11Device* m_pDevice) final;
 	void Draw(const DirectX::XMMATRIX& vp,
 		ID3D11DeviceContext* m_pDeviceContext) final;
+
+	void addInstance() final;
 private:
-	GeomBuffer geomBuffer;
+	GeomBuffer geomBuffers[100];
+	std::vector<float> rotateSpeed;
+	std::vector<float> rotate;
 };
 
 class Square : public Shape

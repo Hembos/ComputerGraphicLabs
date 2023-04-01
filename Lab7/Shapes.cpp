@@ -99,24 +99,33 @@ HRESULT Cube::CreateGeometry(ID3D11Device* m_pDevice)
         constBuffers.push_back(m_pSceneBuffer);
     }
 
-    ID3D11Buffer* m_pGeomBuffer;
+    ID3D11Buffer* m_pGeomBufferInst;
 
     if (SUCCEEDED(hr))
     {
         desc = { 0 };
-        desc.ByteWidth = sizeof(GeomBuffer);
+        desc.ByteWidth = sizeof(GeomBuffer) * maxInstancesNum;
         desc.Usage = D3D11_USAGE_DEFAULT;
         desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
         desc.CPUAccessFlags = 0;
         desc.MiscFlags = 0;
         desc.StructureByteStride = 0;
 
-        hr = m_pDevice->CreateBuffer(&desc, NULL, &m_pGeomBuffer);
+        hr = m_pDevice->CreateBuffer(&desc, NULL, &m_pGeomBufferInst);
     }
 
     if (SUCCEEDED(hr))
     {
-        constBuffers.push_back(m_pGeomBuffer);
+        constBuffers.push_back(m_pGeomBufferInst);
+    }
+
+    for (int i = 0; i < maxInstancesNum; i++)
+    {
+        translateMatrices.push_back(DirectX::XMMatrixTranslation(rand() % 10, rand() % 10, rand() % 10));
+        scaleMatrices.push_back(DirectX::XMMatrixScaling(1.0f, 1.0f, 1.0f));
+        rotateMatrices.push_back(DirectX::XMMatrixRotationAxis(DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), 0.0f));
+        rotateSpeed.push_back(rand() % 100 / 1000.0f);
+        rotate.push_back(0);
     }
 
     return hr;
@@ -130,7 +139,7 @@ HRESULT Cube::CreateShaders(ID3D11Device* m_pDevice)
         { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0 },
         { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 36, D3D11_INPUT_PER_VERTEX_DATA, 0 }
     };
-    D3D_SHADER_MACRO defines[] = { "USE_TEXTURE", "1", "APPLY_LIGHT", "1", "USE_NORMAL_MAP", "1", NULL, NULL};
+    D3D_SHADER_MACRO defines[] = { "USE_TEXTURE", "1", /*"APPLY_LIGHT", "1", "USE_NORMAL_MAP", "1", */NULL, NULL};
     if (!vs.Initialize(m_pDevice, L"ShapeVS.hlsl", defines))
     {
         return S_FALSE;
@@ -192,15 +201,21 @@ void Cube::Draw(const DirectX::XMMATRIX& vp, ID3D11DeviceContext* m_pDeviceConte
 {
     m_pDeviceContext->RSSetState(rasterizerState);
 
-    model = DirectX::XMMatrixIdentity();
-    model = rotateMatrix * scaleMatrix * translateMatrix;
-    geomBuffer.normalTransform = DirectX::XMMatrixTranspose(DirectX::XMMatrixInverse(nullptr, model));
-    geomBuffer.modelMatrix = model;
-    geomBuffer.modelMatrix = DirectX::XMMatrixTranspose(geomBuffer.modelMatrix);
+    for (int i = 0; i < numInstances; i++)
+    {
+        rotate[i] += rotateSpeed[i];
+        if (rotate[i] > 6.28f)
+            rotate[i] = 0.0f;
+        rotateMatrices[i] = DirectX::XMMatrixRotationAxis(DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), rotate[i]);
+        geomBuffers[i].modelMatrix = scaleMatrices[i] * rotateMatrices[i] * translateMatrices[i];
+        //geomBuffers[i].normalTransform = DirectX::XMMatrixTranspose(DirectX::XMMatrixInverse(nullptr, geomBuffers[i].modelMatrix));
+        geomBuffers[i].modelMatrix = DirectX::XMMatrixTranspose(geomBuffers[i].modelMatrix);
+    }
+
     scBuffer.vp = vp;
     scBuffer.vp = DirectX::XMMatrixTranspose(scBuffer.vp);
     m_pDeviceContext->UpdateSubresource(constBuffers[0], 0, nullptr, &scBuffer, 0, 0);
-    m_pDeviceContext->UpdateSubresource(constBuffers[1], 0, nullptr, &geomBuffer, 0, 0);
+    m_pDeviceContext->UpdateSubresource(constBuffers[1], 0, nullptr, &geomBuffers, 0, 0);
 
     m_pDeviceContext->IASetInputLayout(m_pInputLayout);
 
@@ -221,7 +236,15 @@ void Cube::Draw(const DirectX::XMMATRIX& vp, ID3D11DeviceContext* m_pDeviceConte
     UINT offset = 0;
     m_pDeviceContext->IASetVertexBuffers(0, 1, &m_pVertextBuffer, &stride, &offset);
 
-    m_pDeviceContext->DrawIndexed(36, 0, 0);
+    m_pDeviceContext->DrawIndexedInstanced(36, numInstances, 0, 0, 0);
+}
+
+void Cube::addInstance()
+{
+    if (numInstances + 1 < maxInstancesNum)
+    {
+        numInstances++;
+    }
 }
 
 HRESULT Shape::setRasterizerState(ID3D11Device* m_pDevice, D3D11_CULL_MODE cullMode)
@@ -237,19 +260,29 @@ HRESULT Shape::setRasterizerState(ID3D11Device* m_pDevice, D3D11_CULL_MODE cullM
     return result;
 }
 
-void Shape::Translate(DirectX::XMMATRIX translateMatrix)
+void Shape::Translate(DirectX::XMMATRIX translateMatrix, int ind)
 {
-    this->translateMatrix = translateMatrix;
+    this->translateMatrices[ind] = translateMatrix;
 }
 
-void Shape::Scale(DirectX::XMMATRIX scaleMatrix)
+void Shape::Scale(DirectX::XMMATRIX scaleMatrix, int ind)
 {
-    this->scaleMatrix = scaleMatrix;
+    this->scaleMatrices[ind] = scaleMatrix;
 }
 
-void Shape::Rotate(DirectX::XMMATRIX rotateMatrix)
+void Shape::Rotate(DirectX::XMMATRIX rotateMatrix, int ind)
 {
-    this->rotateMatrix = rotateMatrix;
+    this->rotateMatrices[ind] = rotateMatrix;
+}
+
+void Shape::setMaxInstanceNum(int num)
+{
+    maxInstancesNum = num;
+}
+
+int Shape::getMaxInstanceNum()
+{
+    return maxInstancesNum;
 }
 
 void Shape::Clean()
@@ -412,7 +445,7 @@ HRESULT Square::CreateTextures(ID3D11Device* m_pDevice)
 
 void Square::Draw(const DirectX::XMMATRIX& vp, ID3D11DeviceContext* m_pDeviceContext)
 {
-    m_pDeviceContext->RSSetState(rasterizerState);
+   /* m_pDeviceContext->RSSetState(rasterizerState);
 
     model = DirectX::XMMatrixIdentity();
     model = rotateMatrix * scaleMatrix * translateMatrix;
@@ -437,7 +470,7 @@ void Square::Draw(const DirectX::XMMATRIX& vp, ID3D11DeviceContext* m_pDeviceCon
     UINT offset = 0;
     m_pDeviceContext->IASetVertexBuffers(0, 1, &m_pVertextBuffer, &stride, &offset);
 
-    m_pDeviceContext->DrawIndexed(6, 0, 0);
+    m_pDeviceContext->DrawIndexed(6, 0, 0);*/
 }
 
 void Square::setColor(DirectX::XMVECTOR color)
@@ -625,7 +658,7 @@ HRESULT Sphere::CreateTextures(ID3D11Device* m_pDevice)
 void Sphere::Draw(const DirectX::XMMATRIX& vp,
     ID3D11DeviceContext* m_pDeviceContext)
 {
-    m_pDeviceContext->RSSetState(rasterizerState);
+   /* m_pDeviceContext->RSSetState(rasterizerState);
 
     model = DirectX::XMMatrixIdentity();
     model = scaleMatrix * translateMatrix;
@@ -657,7 +690,7 @@ void Sphere::Draw(const DirectX::XMMATRIX& vp,
     UINT offset = 0;
     m_pDeviceContext->IASetVertexBuffers(0, 1, &m_pVertextBuffer, &stride, &offset);
 
-    m_pDeviceContext->DrawIndexed(numIndeces, 0, 0);
+    m_pDeviceContext->DrawIndexed(numIndeces, 0, 0);*/
 }
 
 void Sphere::setColor(DirectX::XMVECTOR color)

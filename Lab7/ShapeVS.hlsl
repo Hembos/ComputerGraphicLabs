@@ -1,6 +1,6 @@
 #include "Scene.hlsli"
 
-cbuffer GeomBuffer : register (b1)
+struct GeomBuffer
 {
 	float4x4 model;
 #ifdef APPLY_LIGHT
@@ -8,9 +8,15 @@ cbuffer GeomBuffer : register (b1)
 #endif
 };
 
+cbuffer GeomBufferInst : register (b1)
+{
+	GeomBuffer geomBuffer[100];
+};
+
 struct VS_INPUT
 {
 	float3 pos : POSITION;
+	uint instanceId : SV_InstanceID;
 #ifdef USE_NORMAL_MAP
 	float3 tang : TANGENT;
 #endif
@@ -25,6 +31,7 @@ struct VS_INPUT
 struct VS_OUTPUT
 {
 	float4 pos : SV_POSITION;
+	nointerpolation uint instanceId : INST_ID;
 #ifdef USE_NORMAL_MAP
 	float3 tang : TANGENT;
 #endif
@@ -40,18 +47,21 @@ struct VS_OUTPUT
 
 VS_OUTPUT main(VS_INPUT input)
 {
+	unsigned int idx = input.instanceId;
+
 	VS_OUTPUT output;
-	float4 world = mul(float4(input.pos, 1.0f), model);
+	float4 world = mul(float4(input.pos, 1.0f), geomBuffer[idx].model);
 	output.pos = mul(world, vp);
 #ifdef USE_NORMAL_MAP
-	output.tang = mul(normalTransform, float4(input.tang, 0.0)).xyz;
+	output.tang = mul(geomBuffer[idx].normalTransform, float4(input.tang, 0.0)).xyz;
 #endif
 #ifdef APPLY_LIGHT
-	output.normal = mul(normalTransform, float4(input.normal, 0.0)).xyz;
+	output.normal = mul(geomBuffer[idx].normalTransform, float4(input.normal, 0.0)).xyz;
 	output.worldPos = world;
 #endif
 #ifdef USE_TEXTURE
 	output.texCoord = input.texCoord;
 #endif
+	output.instanceId = idx;
 	return output;
 }
