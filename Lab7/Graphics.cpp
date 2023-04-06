@@ -8,12 +8,9 @@
 
 Graphics::~Graphics()
 {
-    cube.Clean();
-    //cube1.Clean();
-    //skyBox.Clean();
-    //square.Clean();
-    //square1.Clean();
-    //light.Clean();
+    cubeInstances.Clean();
+    light.Clean();
+
     SAFE_RELEASE(m_pBackBufferRTV);
     SAFE_RELEASE(m_pSwapChain);
     SAFE_RELEASE(m_pDeviceContext);
@@ -144,21 +141,6 @@ bool Graphics::InitDirectX(HWND hwnd, int width, int height)
     viewport.MaxDepth = 1.0f;
     m_pDeviceContext->RSSetViewports(1, &viewport);
 
-    if (SUCCEEDED(result))
-    {
-        result = cube.setRasterizerState(m_pDevice, D3D11_CULL_MODE::D3D11_CULL_BACK);
-        //result = cube1.setRasterizerState(m_pDevice, D3D11_CULL_MODE::D3D11_CULL_BACK);
-        //result = skyBox.setRasterizerState(m_pDevice, D3D11_CULL_MODE::D3D11_CULL_FRONT);
-    }
-   /* if (SUCCEEDED(result))
-        result = square.setRasterizerState(m_pDevice, D3D11_CULL_MODE::D3D11_CULL_NONE);
-    if (SUCCEEDED(result))
-        result = square1.setRasterizerState(m_pDevice, D3D11_CULL_MODE::D3D11_CULL_NONE);*/
-
-    cube.CreateTextures(m_pDevice);
-    //cube1.CreateTextures(m_pDevice);
-    //skyBox.CreateTextures(m_pDevice);
-    
     SAFE_RELEASE(pSelectedAdapter);
     SAFE_RELEASE(pFactory);
 
@@ -172,46 +154,32 @@ HRESULT SetResourceName(ID3D11DeviceChild* pResource, const std::string name)
 
 bool Graphics::InitShaders()
 {
-    HRESULT result = cube.CreateShaders(m_pDevice);
-    //result = cube1.CreateShaders(m_pDevice);
-    //result = square.CreateShaders(m_pDevice);
-    //result = square1.CreateShaders(m_pDevice);
-    //result = light.createBuffer(m_pDevice);
-
-    //if (SUCCEEDED(result))
-    //{
-    //    result = skyBox.CreateShaders(m_pDevice);
-    //}
+    HRESULT result = cubeInstances.CreateShaders(m_pDevice);
 
     return SUCCEEDED(result);
 }
 
 bool Graphics::InitScene()
 {
-    HRESULT hr = cube.CreateGeometry(m_pDevice);
-    //hr = cube1.CreateGeometry(m_pDevice);
-    //hr = square.CreateGeometry(m_pDevice);
-    //hr = square1.CreateGeometry(m_pDevice);
+    HRESULT hr = cubeInstances.CreateGeometry(m_pDevice);
+    if (SUCCEEDED(hr))
+    {
+        hr = cubeInstances.CreateTextures(m_pDevice);
+    }
 
-    //if (SUCCEEDED(hr))
-    //{
-    //    hr = skyBox.CreateGeometry(m_pDevice);
-    //}
+    if (SUCCEEDED(hr))
+    {
+        hr = cubeInstances.setRasterizerState(m_pDevice, D3D11_CULL_MODE::D3D11_CULL_BACK);
+    }
+
+    if (SUCCEEDED(hr))
+    {
+        hr = light.Initialize(m_pDevice);
+    }
 
     camera.SetPosition(DirectX::XMVectorSet(-2.0f, 0.0f, 0.0f, 0.0));
     camera.SetProjectionValues(100.0f, (float)windowHeight / windowWidth, 0.1f, 100.0f);
     camera.AdjustRotation(DirectX::XMVectorSet(0.0f, DirectX::XM_PIDIV2, 0.0f, 1.0f));
-
-    //skyBox.setRadius(camera.GetFov(), camera.GetNearPlane(), windowWidth, windowHeight);
-    //
-    //square.setColor(DirectX::XMVectorSet(1.0f, 0.0f, 1.0f, 0.5f));
-    //square1.setColor(DirectX::XMVectorSet(0.0f, 1.0f, 0.5f, 0.5f));
-
-    //light.setAmbient(0.5f, 0.5f, 0.5f, 0.5f);
-
-    //light.addLight(m_pDevice, m_pDeviceContext);
-
-    
 
     return SUCCEEDED(hr);
 }
@@ -257,52 +225,21 @@ void Graphics::RenderFrame()
 
     m_pDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-    DirectX::XMMATRIX vp = camera.GetViewMatrix()* camera.GetProjectionMatrix();
-    //cube.Translate(DirectX::XMMatrixTranslation(0.0f, 0.0f, 1.7f), 0);
+    DirectX::XMMATRIX vp = camera.GetViewMatrix() * camera.GetProjectionMatrix();
 
-    /*skyBox.setCamPos(camera.GetPositionVector());
-    light.setCamPos(camera.GetPositionVector());
+    light.UpdateBuffer(m_pDeviceContext);
+    cubeInstances.Draw(vp, m_pDeviceContext);
+    light.Draw(vp, m_pDeviceContext);
 
-    square.Rotate(DirectX::XMMatrixRotationX(DirectX::XM_PIDIV2));
-    square.Translate(DirectX::XMMatrixTranslation(0.0f, 0.0f, 1.5f));
-    square1.Rotate(DirectX::XMMatrixRotationX(DirectX::XM_PIDIV2));
-    square1.Translate(DirectX::XMMatrixTranslation(0.0f, 0.0f, 1.3f));*/
+    m_pDeviceContext->OMSetDepthStencilState(m_pDepthTransparentState, 0);
 
-    static float r = 0.0f;
-    r += 0.01;
-    //cube.Rotate(DirectX::XMMatrixRotationY(r), 0);
+    m_pDeviceContext->OMSetBlendState(m_pTransBlendState, nullptr, 0xFFFFFFFF);
 
-    //light.updateBuffer(m_pDeviceContext);
-    cube.Draw(vp, m_pDeviceContext);
-    //cube1.Draw(vp, m_pDeviceContext);
-    //light.Draw(vp, m_pDeviceContext);
-    //m_pDeviceContext->OMSetDepthStencilState(m_pDepthTransparentState, 0);
-    //skyBox.Draw(vp, m_pDeviceContext);
-    
-    //m_pDeviceContext->OMSetBlendState(m_pTransBlendState, nullptr, 0xFFFFFFFF);
-    //square.Draw(vp, m_pDeviceContext);
-    //square1.Draw(vp, m_pDeviceContext);
-
-    //light.RenderImGUI(m_pDevice, m_pDeviceContext);
     RenderImGUI();
 
     HRESULT result = m_pSwapChain->Present(0, 0);
     assert(SUCCEEDED(result));
 }
-
-//void Graphics::RenderImGUI()
-//{
-//    ImGui_ImplWin32_NewFrame();
-//    ImGui_ImplDX11_NewFrame();
-//    ImGui::NewFrame();
-//
-//    ImGui::Begin("Test");
-//    ImGui::End();
-//
-//    ImGui::Render();
-//
-//    ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-//}
 
 Camera& Graphics::GetCamera()
 {
@@ -343,8 +280,6 @@ void Graphics::Resize(const int& width, const int& height)
                     pBackBuffer = NULL;
                 }
             }
-
-            //skyBox.setRadius(camera.GetFov(), camera.GetNearPlane(), windowWidth, windowHeight);
 
             assert(SUCCEEDED(result));
         }
@@ -426,12 +361,16 @@ void Graphics::RenderImGUI()
     ImGui_ImplDX11_NewFrame();
     ImGui::NewFrame();
 
+    light.RenderImGUI();
+
     ImGui::Begin("Instance creation");
 
     if (ImGui::Button("+"))
     {
-        cube.addInstance();
+        cubeInstances.addInstance();
     }
+
+    ImGui::Text(std::to_string(cubeInstances.getNumInstances()).c_str());
 
     ImGui::End();
 

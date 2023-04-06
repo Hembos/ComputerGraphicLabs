@@ -1,62 +1,54 @@
 #pragma once
 
-#include <d3d11.h>
-#include <DirectXMath.h>
-#include <vector>
+#include "Shapes/Sphere.h"
 
 #include "ImGui/imgui.h"
 #include "ImGui/imgui_impl_win32.h"
 #include "ImGui/imgui_impl_dx11.h"
 
-#include "Shapes.h"
-
-#pragma comment(lib, "d3d11")
-
 class Light
 {
-	struct PointLight
-	{
-		float pos[4];
-		float color[4];
-	};
-
+private:
 	struct SceneBuffer
 	{
 		DirectX::XMMATRIX vp;
 		DirectX::XMVECTOR cameraPos;
 	};
 
+	struct PointLight
+	{
+		float pos[4];
+		float color[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+	};
+
 	struct LightBuffer
 	{
 		PointLight lightsDesc[10];
-		float ambientColor[4]; // (r,g,b,a): a - intensity, rgb - color
-		int lightsCount;
-		float diffuseCoef;
-		float specularCoef;
-		float shine;
+		float ambientColor[4] = { 0.5f, 0.5f, 0.5f, 0.5f }; // (r,g,b,a): a - intensity, rgb - color
+		int lightsCount = 0;
+		float diffuseCoef = 0.5f;
+		float specularCoef = 0.9f;
+		float shine = 20.0f;
 	};
 public:
-	Light() = default;
-	~Light() = default;
-	HRESULT createBuffer(ID3D11Device* device);
-	void updateBuffer(ID3D11DeviceContext* m_pDeviceContext);
-	void setAmbient(float r, float g, float b, float intensity);
-	void RenderImGUI(ID3D11Device* device, ID3D11DeviceContext* m_pDeviceContext);
-	void addLight(ID3D11Device* device, ID3D11DeviceContext* m_pDeviceContext);
-
+	HRESULT Initialize(ID3D11Device* m_pDevice);
+	void AddLight();
 	void Draw(const DirectX::XMMATRIX& vp,
 		ID3D11DeviceContext* m_pDeviceContext);
+	void RenderImGUI();
 
-	void setCamPos(DirectX::XMVECTOR camPos);
+	void UpdateBuffer(ID3D11DeviceContext* m_pDeviceContext);
+
+	void SetCamPos(DirectX::XMVECTOR camPos);
 
 	void Clean();
 private:
+	Sphere lightInstances;
+
 	LightBuffer light;
 	ID3D11Buffer* lightBuffer;
 
 	SceneBuffer scBuffer;
 	ID3D11Buffer* sceneBuffer;
-	
-	std::vector<Sphere> lightsShapes;
 };
 

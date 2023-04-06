@@ -1,9 +1,8 @@
 #pragma once
 
 #include "Camera.h"
-#include "Shapes.h"
+#include "Shapes/Cube.h"
 #include "Light.h"
-#include "SkyBox.h"
 
 #include <d3d11.h>
 #include <dxgi.h>
@@ -29,7 +28,6 @@ public:
 	void InitImGUI(HWND hwnd);
 
 	void RenderFrame();
-	//void RenderImGUI();
 
 	Camera& GetCamera();
 
@@ -56,11 +54,8 @@ private:
 	ID3D11BlendState* m_pTransBlendState;
 
 	Camera camera;
-	Cube cube;
-	//Cube cube1;
-	//SkyBox skyBox;
-	//Square square;
-	//Square square1;
-	//Light light;
+
+	Cube cubeInstances;
+	Light light;
 };
 
