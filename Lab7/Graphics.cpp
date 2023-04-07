@@ -10,6 +10,8 @@ Graphics::~Graphics()
 {
     cubeInstances.Clean();
     light.Clean();
+    postProc.Clean();
+    skyBox.Clean();
 
     SAFE_RELEASE(m_pBackBufferRTV);
     SAFE_RELEASE(m_pSwapChain);
@@ -129,6 +131,11 @@ bool Graphics::InitDirectX(HWND hwnd, int width, int height)
         result = CreateBlendState();
     }
 
+    if (SUCCEEDED(result))
+    {
+        result = postProc.CreateBuffers(m_pDevice, height, width);
+    }
+
     ID3D11RenderTargetView* views[] = { m_pBackBufferRTV };
     m_pDeviceContext->OMSetRenderTargets(1, views, m_pDepthBufferDSV);
 
@@ -156,6 +163,11 @@ bool Graphics::InitShaders()
 {
     HRESULT result = cubeInstances.CreateShaders(m_pDevice);
 
+    if (SUCCEEDED(result))
+    {
+        result = skyBox.CreateShaders(m_pDevice);
+    }
+
     return SUCCEEDED(result);
 }
 
@@ -169,7 +181,13 @@ bool Graphics::InitScene()
 
     if (SUCCEEDED(hr))
     {
+        hr = skyBox.CreateGeometry(m_pDevice);
+    }
+
+    if (SUCCEEDED(hr))
+    {
         hr = cubeInstances.setRasterizerState(m_pDevice, D3D11_CULL_MODE::D3D11_CULL_BACK);
+        hr = skyBox.setRasterizerState(m_pDevice, D3D11_CULL_MODE::D3D11_CULL_FRONT);
     }
 
     if (SUCCEEDED(hr))
@@ -177,9 +195,18 @@ bool Graphics::InitScene()
         hr = light.Initialize(m_pDevice);
     }
 
+    if (SUCCEEDED(hr))
+    {
+        hr = postProc.CreateShaders(m_pDevice);
+    }
+
+    skyBox.CreateTextures(m_pDevice);
+
     camera.SetPosition(DirectX::XMVectorSet(-2.0f, 0.0f, 0.0f, 0.0));
     camera.SetProjectionValues(100.0f, (float)windowHeight / windowWidth, 0.1f, 100.0f);
     camera.AdjustRotation(DirectX::XMVectorSet(0.0f, DirectX::XM_PIDIV2, 0.0f, 1.0f));
+
+    skyBox.setRadius(camera.GetFov(), camera.GetNearPlane(), windowWidth, windowHeight);
 
     return SUCCEEDED(hr);
 }
@@ -198,12 +225,9 @@ void Graphics::RenderFrame()
 {
     m_pDeviceContext->ClearState();
 
-    ID3D11RenderTargetView* views[] = { m_pBackBufferRTV };
-    m_pDeviceContext->OMSetRenderTargets(1, views, m_pDepthBufferDSV);
-
-    static const FLOAT BackColor[4] = { 0.25f, 0.25f, 0.25f, 1.0f };
-    m_pDeviceContext->ClearRenderTargetView(m_pBackBufferRTV, BackColor);
-    m_pDeviceContext->ClearDepthStencilView(m_pDepthBufferDSV, D3D11_CLEAR_DEPTH, 0.0f, 0);
+    //ID3D11RenderTargetView* views[] = { m_pBackBufferRTV };
+    //m_pDeviceContext->OMSetRenderTargets(1, views, m_pDepthBufferDSV);
+    postProc.SetTargetInColorRTV(m_pDeviceContext, m_pDepthBufferDSV);
 
     D3D11_VIEWPORT viewport;
     viewport.TopLeftX = 0;
@@ -225,15 +249,19 @@ void Graphics::RenderFrame()
 
     m_pDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-    DirectX::XMMATRIX vp = camera.GetViewMatrix() * camera.GetProjectionMatrix();
+    skyBox.setCamPos(camera.GetPositionVector());
 
     light.UpdateBuffer(m_pDeviceContext);
-    cubeInstances.Draw(vp, m_pDeviceContext);
-    light.Draw(vp, m_pDeviceContext);
+    cubeInstances.Draw(camera.GetProjectionMatrix(), camera.GetViewMatrix(), m_pDeviceContext);
+    light.Draw(camera.GetProjectionMatrix(), camera.GetViewMatrix(), m_pDeviceContext);
+    m_pDeviceContext->OMSetDepthStencilState(m_pDepthTransparentState, 0);
+    skyBox.Draw(camera.GetViewMatrix() * camera.GetProjectionMatrix(), m_pDeviceContext);
 
     m_pDeviceContext->OMSetDepthStencilState(m_pDepthTransparentState, 0);
 
     m_pDeviceContext->OMSetBlendState(m_pTransBlendState, nullptr, 0xFFFFFFFF);
+
+    postProc.Draw(m_pDeviceContext, m_pBackBufferRTV);
 
     RenderImGUI();
 
@@ -250,17 +278,10 @@ void Graphics::Resize(const int& width, const int& height)
 {
     if ((width != windowWidth || height != windowHeight) && m_pSwapChain != nullptr)
     {
-        if (m_pBackBufferRTV != NULL)
-        {
-            m_pBackBufferRTV->Release();
-            m_pBackBufferRTV = NULL;
-        }
-
-        if (m_pDepthBufferDSV!= NULL)
-        {
-            m_pDepthBufferDSV->Release();
-            m_pDepthBufferDSV = NULL;
-        }
+        SAFE_RELEASE(m_pBackBufferRTV);
+        SAFE_RELEASE(m_pDepthBufferDSV);
+        SAFE_RELEASE(m_pDepthState);
+        SAFE_RELEASE(m_pDepthTransparentState);
 
         HRESULT result = m_pSwapChain->ResizeBuffers(2, width, height, DXGI_FORMAT_R8G8B8A8_UNORM, 0);
         if (SUCCEEDED(result))
@@ -281,12 +302,19 @@ void Graphics::Resize(const int& width, const int& height)
                 }
             }
 
+            skyBox.setRadius(camera.GetFov(), camera.GetNearPlane(), windowWidth, windowHeight);
+
             assert(SUCCEEDED(result));
         }
 
         if (SUCCEEDED(result))
         {
             CreateDepthBuffer();
+        }
+
+        if (SUCCEEDED(result))
+        {
+            postProc.Resize(m_pDevice, windowHeight, windowWidth);
         }
     }
 }
@@ -363,16 +391,9 @@ void Graphics::RenderImGUI()
 
     light.RenderImGUI();
 
-    ImGui::Begin("Instance creation");
+    cubeInstances.RenderImGUI();
 
-    if (ImGui::Button("+"))
-    {
-        cubeInstances.addInstance();
-    }
-
-    ImGui::Text(std::to_string(cubeInstances.getNumInstances()).c_str());
-
-    ImGui::End();
+    postProc.RenderImGUI();
 
     ImGui::Render();
 

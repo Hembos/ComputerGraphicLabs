@@ -1,6 +1,12 @@
 #include "Cube.h"
 #include "../DDSTextureLoader11.h"
 
+#include "../ImGui/imgui.h"
+#include "../ImGui/imgui_impl_win32.h"
+#include "../ImGui/imgui_impl_dx11.h"
+
+#include <DirectXCollision.h>
+
 HRESULT Cube::CreateGeometry(ID3D11Device* m_pDevice)
 {
     static const Vertex v[] = {
@@ -136,6 +142,26 @@ HRESULT Cube::CreateGeometry(ID3D11Device* m_pDevice)
         constBuffers.push_back(m_pTextureNumInst);
     }
 
+    ID3D11Buffer* m_pVisibleInstInd;
+
+    if (SUCCEEDED(hr))
+    {
+        desc = { 0 };
+        desc.ByteWidth = sizeof(VisibleIndexes) * maxInstancesNum;
+        desc.Usage = D3D11_USAGE_DEFAULT;
+        desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+        desc.CPUAccessFlags = 0;
+        desc.MiscFlags = 0;
+        desc.StructureByteStride = 0;
+
+        hr = m_pDevice->CreateBuffer(&desc, NULL, &m_pVisibleInstInd);
+    }
+
+    if (SUCCEEDED(hr))
+    {
+        constBuffers.push_back(m_pVisibleInstInd);
+    }
+
     for (int i = 0; i < maxInstancesNum; i++)
     {
         translateMatrices.push_back(DirectX::XMMatrixTranslation(rand() % 10, rand() % 10, rand() % 10));
@@ -145,6 +171,7 @@ HRESULT Cube::CreateGeometry(ID3D11Device* m_pDevice)
         texNumBuffers.push_back({ DirectX::XMINT4(rand() % 2, 0, 0, 0) });
         rotateSpeed.push_back(rand() % 100 / 1000.0f);
         rotateAngle.push_back(0);
+        visibleIndBuffer.push_back({ DirectX::XMINT4(0, 0, 0, 0) });
     }
 
     return hr;
@@ -224,11 +251,16 @@ HRESULT Cube::CreateTextures(ID3D11Device* m_pDevice)
     return result;
 }
 
-void Cube::Draw(const DirectX::XMMATRIX& vp,
+void Cube::Draw(const DirectX::XMMATRIX& projMatrix, const DirectX::XMMATRIX& viewMatrix,
 	ID3D11DeviceContext* m_pDeviceContext)
 {
     m_pDeviceContext->RSSetState(rasterizerState);
 
+    DirectX::BoundingFrustum fr(projMatrix, true);
+    DirectX::XMMATRIX inverseViewMatrix = DirectX::XMMatrixInverse(nullptr, viewMatrix);
+    fr.Transform(fr, inverseViewMatrix);
+
+    visibleObjectNum = 0;
     for (int i = 0; i < numInstances; i++)
     {
         rotateAngle[i] += rotateSpeed[i];
@@ -238,13 +270,22 @@ void Cube::Draw(const DirectX::XMMATRIX& vp,
         geomBuffers[i].modelMatrix = scaleMatrices[i] * rotateMatrices[i] * translateMatrices[i];
         geomBuffers[i].normalTransform = DirectX::XMMatrixTranspose(DirectX::XMMatrixInverse(nullptr, geomBuffers[i].modelMatrix));
         geomBuffers[i].modelMatrix = DirectX::XMMatrixTranspose(geomBuffers[i].modelMatrix);
+        DirectX::BoundingBox box(DirectX::XMFLOAT3(translateMatrices[i].r[3].m128_f32[0], 
+                                                   translateMatrices[i].r[3].m128_f32[1], 
+                                                   translateMatrices[i].r[3].m128_f32[2]), 
+                                 DirectX::XMFLOAT3(0.5, 0.5, 0.5));
+        if (fr.Contains(box))
+        {
+            visibleIndBuffer[visibleObjectNum++].idx.x = i;
+        }
     }
 
-    scBuffer.vp = vp;
+    scBuffer.vp = viewMatrix * projMatrix;
     scBuffer.vp = DirectX::XMMatrixTranspose(scBuffer.vp);
     m_pDeviceContext->UpdateSubresource(constBuffers[0], 0, nullptr, &scBuffer, 0, 0);
     m_pDeviceContext->UpdateSubresource(constBuffers[1], 0, nullptr, geomBuffers.data(), 0, 0);
     m_pDeviceContext->UpdateSubresource(constBuffers[2], 0, nullptr, texNumBuffers.data(), 0, 0);
+    m_pDeviceContext->UpdateSubresource(constBuffers[3], 0, nullptr, visibleIndBuffer.data(), 0, 0);
 
     m_pDeviceContext->IASetInputLayout(m_pInputLayout);
 
@@ -252,6 +293,7 @@ void Cube::Draw(const DirectX::XMMATRIX& vp,
     m_pDeviceContext->PSSetShader(ps.GetShader(), NULL, 0);
 
     m_pDeviceContext->VSSetConstantBuffers(0, 2, constBuffers.data());
+    m_pDeviceContext->VSSetConstantBuffers(2, 1, &constBuffers[3]);
     m_pDeviceContext->PSSetConstantBuffers(2, 1, &constBuffers[2]);
 
     if (!samplers.empty() && !resources.empty())
@@ -266,5 +308,20 @@ void Cube::Draw(const DirectX::XMMATRIX& vp,
     UINT offset = 0;
     m_pDeviceContext->IASetVertexBuffers(0, 1, &m_pVertextBuffer, &stride, &offset);
 
-    m_pDeviceContext->DrawIndexedInstanced(36, numInstances, 0, 0, 0);
+    m_pDeviceContext->DrawIndexedInstanced(36, visibleObjectNum, 0, 0, 0);
+}
+
+void Cube::RenderImGUI()
+{
+    ImGui::Begin("Instance creation");
+
+    if (ImGui::Button("+"))
+    {
+        addInstance();
+    }
+
+    ImGui::Text((std::string("Instances num: ") + std::to_string(numInstances)).c_str());
+    ImGui::Text((std::string("Visible instances num: ") + std::to_string(visibleObjectNum)).c_str());
+
+    ImGui::End();
 }

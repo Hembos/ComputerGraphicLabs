@@ -50,7 +50,7 @@ void Light::AddLight()
     light.lightsCount++;
 }
 
-void Light::Draw(const DirectX::XMMATRIX& vp,
+void Light::Draw(const DirectX::XMMATRIX& projMatrix, const DirectX::XMMATRIX& viewMatrix,
     ID3D11DeviceContext* m_pDeviceContext)
 {
     for (int i = 0; i < lightInstances.getNumInstances(); i++)
@@ -59,7 +59,7 @@ void Light::Draw(const DirectX::XMMATRIX& vp,
         lightInstances.Translate(DirectX::XMMatrixTranslation(light.lightsDesc[i].pos[0], light.lightsDesc[i].pos[1], light.lightsDesc[i].pos[2]), i);
     }
 
-    lightInstances.Draw(vp, m_pDeviceContext);
+    lightInstances.Draw(projMatrix, viewMatrix, m_pDeviceContext);
 }
 
 void Light::RenderImGUI()

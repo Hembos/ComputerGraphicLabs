@@ -90,6 +90,12 @@
     <ClCompile Include="Light.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PostProcessing.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SkyBox.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h">
@@ -158,6 +164,12 @@
     <ClInclude Include="Light.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="PostProcessing.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SkyBox.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Scene.hlsli" />
@@ -168,5 +180,9 @@
     <FxCompile Include="CubeVS.hlsl" />
     <FxCompile Include="LightSpherePS.hlsl" />
     <FxCompile Include="LightSphereVS.hlsl" />
+    <FxCompile Include="PostProcVS.hlsl" />
+    <FxCompile Include="PostProcPS.hlsl" />
+    <FxCompile Include="SkyBoxVS.hlsl" />
+    <FxCompile Include="SkyBoxPS.hlsl" />
   </ItemGroup>
 </Project>

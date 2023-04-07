@@ -33,7 +33,7 @@ private:
 public:
 	HRESULT Initialize(ID3D11Device* m_pDevice);
 	void AddLight();
-	void Draw(const DirectX::XMMATRIX& vp,
+	void Draw(const DirectX::XMMATRIX& projMatrix, const DirectX::XMMATRIX& viewMatrix,
 		ID3D11DeviceContext* m_pDeviceContext);
 	void RenderImGUI();
 

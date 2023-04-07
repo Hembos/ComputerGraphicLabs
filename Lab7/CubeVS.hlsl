@@ -11,6 +11,11 @@ cbuffer GeomBufferInst : register (b1)
 	GeomBuffer geomBuffer[100];
 };
 
+cbuffer TextureNumInst : register (b2)
+{
+	int4 visibleInd[100];
+};
+
 struct VS_INPUT
 {
 	float3 pos : POSITION;
@@ -32,7 +37,7 @@ struct VS_OUTPUT
 
 VS_OUTPUT main(VS_INPUT input)
 {
-	unsigned int idx = input.instanceId;
+	unsigned int idx = visibleInd[input.instanceId];
 
 	VS_OUTPUT output;
 	float4 world = mul(float4(input.pos, 1.0f), geomBuffer[idx].model);

@@ -3,6 +3,8 @@
 #include "Camera.h"
 #include "Shapes/Cube.h"
 #include "Light.h"
+#include "PostProcessing.h"
+#include "SkyBox.h"
 
 #include <d3d11.h>
 #include <dxgi.h>
@@ -57,5 +59,9 @@ private:
 
 	Cube cubeInstances;
 	Light light;
+
+	PostProcessing postProc;
+
+	SkyBox skyBox;
 };
 

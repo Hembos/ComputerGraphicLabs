@@ -23,7 +23,7 @@ public:
 	virtual HRESULT CreateGeometry(ID3D11Device* m_pDevice) = 0;
 	virtual HRESULT CreateShaders(ID3D11Device* m_pDevice) = 0;
 	virtual HRESULT CreateTextures(ID3D11Device* m_pDevice) = 0;
-	virtual void Draw(const DirectX::XMMATRIX& vp,
+	virtual void Draw(const DirectX::XMMATRIX& projMatrix, const DirectX::XMMATRIX& viewMatrix,
 						ID3D11DeviceContext* m_pDeviceContext) = 0;
 
 	HRESULT setRasterizerState(ID3D11Device* m_pDevice, D3D11_CULL_MODE cullMode);
