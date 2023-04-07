@@ -142,26 +142,6 @@ HRESULT Cube::CreateGeometry(ID3D11Device* m_pDevice)
         constBuffers.push_back(m_pTextureNumInst);
     }
 
-    ID3D11Buffer* m_pVisibleInstInd;
-
-    if (SUCCEEDED(hr))
-    {
-        desc = { 0 };
-        desc.ByteWidth = sizeof(VisibleIndexes) * maxInstancesNum;
-        desc.Usage = D3D11_USAGE_DEFAULT;
-        desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-        desc.CPUAccessFlags = 0;
-        desc.MiscFlags = 0;
-        desc.StructureByteStride = 0;
-
-        hr = m_pDevice->CreateBuffer(&desc, NULL, &m_pVisibleInstInd);
-    }
-
-    if (SUCCEEDED(hr))
-    {
-        constBuffers.push_back(m_pVisibleInstInd);
-    }
-
     if (SUCCEEDED(hr))
     {
         desc = { 0 };
@@ -214,11 +194,11 @@ HRESULT Cube::CreateGeometry(ID3D11Device* m_pDevice)
     if (SUCCEEDED(hr))
     {
         desc = { 0 };
-        desc.ByteWidth = sizeof(DirectX::XMINT4) * maxInstancesNum;
+        desc.ByteWidth = sizeof(DirectX::XMUINT4) * maxInstancesNum;
         desc.Usage = D3D11_USAGE_DEFAULT;
-        desc.BindFlags = 0;
+        desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
         desc.CPUAccessFlags = 0;
-        desc.MiscFlags = D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS;
+        desc.MiscFlags = 0;
         desc.StructureByteStride = 0;
 
         hr = m_pDevice->CreateBuffer(&desc, NULL, &m_pGeomBufferInstVis);
@@ -244,6 +224,17 @@ HRESULT Cube::CreateGeometry(ID3D11Device* m_pDevice)
         constBuffers.push_back(m_pCullParams);
     }
 
+    if (SUCCEEDED(hr))
+    {
+        D3D11_QUERY_DESC desc;
+        desc.Query = D3D11_QUERY_PIPELINE_STATISTICS;
+        desc.MiscFlags = 0;
+        for (int i = 0; i < 10; i++)
+        {
+            hr = m_pDevice->CreateQuery(&desc, &m_queries[i]);
+        }
+    }
+
     for (int i = 0; i < maxInstancesNum; i++)
     {
         translateMatrices.push_back(DirectX::XMMatrixTranslation(rand() % 10, rand() % 10, rand() % 10));
@@ -253,9 +244,15 @@ HRESULT Cube::CreateGeometry(ID3D11Device* m_pDevice)
         texNumBuffers.push_back({ DirectX::XMINT4(rand() % 2, 0, 0, 0) });
         rotateSpeed.push_back(rand() % 100 / 1000.0f);
         rotateAngle.push_back(0);
-        visibleIndBuffer.push_back({ DirectX::XMINT4(0, 0, 0, 0) });
-    }
+        visibleIndBuffer.push_back({ DirectX::XMUINT4(0, 0, 0, 0) });
 
+        clParams.bbMax[i] = DirectX::XMFLOAT4(translateMatrices[i].r[3].m128_f32[0] + 0.5f,
+                                                translateMatrices[i].r[3].m128_f32[1] + 0.5f,
+                                                translateMatrices[i].r[3].m128_f32[2] + 0.5f, 1.0f);
+        clParams.bbMin[i] = DirectX::XMFLOAT4(translateMatrices[i].r[3].m128_f32[0] - 0.5f,
+                                                translateMatrices[i].r[3].m128_f32[1] - 0.5f,
+                                                translateMatrices[i].r[3].m128_f32[2] - 0.5f, 1.0f);
+    }
     return hr;
 }
 
@@ -341,6 +338,15 @@ HRESULT Cube::CreateTextures(ID3D11Device* m_pDevice)
 void Cube::Draw(const DirectX::XMMATRIX& projMatrix, const DirectX::XMMATRIX& viewMatrix,
 	ID3D11DeviceContext* m_pDeviceContext)
 {
+    DirectX::BoundingFrustum fr(projMatrix, true);
+    DirectX::XMMATRIX inverseViewMatrix = DirectX::XMMatrixInverse(nullptr, viewMatrix);
+    fr.Transform(fr, inverseViewMatrix);
+    fr.GetPlanes(&scBuffer.frustum[0], &scBuffer.frustum[1], &scBuffer.frustum[2], &scBuffer.frustum[3], &scBuffer.frustum[4], &scBuffer.frustum[5]);
+
+    scBuffer.vp = viewMatrix * projMatrix;
+    scBuffer.vp = DirectX::XMMatrixTranspose(scBuffer.vp);
+    m_pDeviceContext->UpdateSubresource(constBuffers[0], 0, nullptr, &scBuffer, 0, 0);
+
     D3D11_DRAW_INDEXED_INSTANCED_INDIRECT_ARGS args;
     args.IndexCountPerInstance = 36;
     args.InstanceCount = 0;
@@ -350,8 +356,10 @@ void Cube::Draw(const DirectX::XMMATRIX& projMatrix, const DirectX::XMMATRIX& vi
 
     m_pDeviceContext->UpdateSubresource(m_pIndirectArgsSrc, 0, nullptr, &args, 0, 0);
     UINT groupNumber = DivUp(maxInstancesNum, 64u);
+    clParams.numShapes.x = numInstances;
+    m_pDeviceContext->UpdateSubresource(constBuffers[3], 0, nullptr, &clParams, 0, 0);
     m_pDeviceContext->CSSetConstantBuffers(0, 1, constBuffers.data());
-    m_pDeviceContext->CSSetConstantBuffers(1, 1, &constBuffers[4]);
+    m_pDeviceContext->CSSetConstantBuffers(1, 1, &constBuffers[3]);
     ID3D11UnorderedAccessView* uavBuffers[2] = { m_pIndirectArgsUAV, m_pGeomBufferInstVisGPU_UAV };
     m_pDeviceContext->CSSetUnorderedAccessViews(0, 2, uavBuffers, nullptr);
     m_pDeviceContext->CSSetShader(cs.GetShader(), nullptr, 0);
@@ -362,11 +370,6 @@ void Cube::Draw(const DirectX::XMMATRIX& projMatrix, const DirectX::XMMATRIX& vi
 
     m_pDeviceContext->RSSetState(rasterizerState);
 
-    DirectX::BoundingFrustum fr(projMatrix, true);
-    DirectX::XMMATRIX inverseViewMatrix = DirectX::XMMatrixInverse(nullptr, viewMatrix);
-    fr.Transform(fr, inverseViewMatrix);
-
-    visibleObjectNum = 0;
     for (int i = 0; i < numInstances; i++)
     {
         rotateAngle[i] += rotateSpeed[i];
@@ -376,22 +379,10 @@ void Cube::Draw(const DirectX::XMMATRIX& projMatrix, const DirectX::XMMATRIX& vi
         geomBuffers[i].modelMatrix = scaleMatrices[i] * rotateMatrices[i] * translateMatrices[i];
         geomBuffers[i].normalTransform = DirectX::XMMatrixTranspose(DirectX::XMMatrixInverse(nullptr, geomBuffers[i].modelMatrix));
         geomBuffers[i].modelMatrix = DirectX::XMMatrixTranspose(geomBuffers[i].modelMatrix);
-        DirectX::BoundingBox box(DirectX::XMFLOAT3(translateMatrices[i].r[3].m128_f32[0], 
-                                                   translateMatrices[i].r[3].m128_f32[1], 
-                                                   translateMatrices[i].r[3].m128_f32[2]), 
-                                 DirectX::XMFLOAT3(0.5, 0.5, 0.5));
-        if (fr.Contains(box))
-        {
-            visibleIndBuffer[visibleObjectNum++].idx.x = i;
-        }
     }
 
-    scBuffer.vp = viewMatrix * projMatrix;
-    scBuffer.vp = DirectX::XMMatrixTranspose(scBuffer.vp);
-    m_pDeviceContext->UpdateSubresource(constBuffers[0], 0, nullptr, &scBuffer, 0, 0);
     m_pDeviceContext->UpdateSubresource(constBuffers[1], 0, nullptr, geomBuffers.data(), 0, 0);
     m_pDeviceContext->UpdateSubresource(constBuffers[2], 0, nullptr, texNumBuffers.data(), 0, 0);
-    m_pDeviceContext->UpdateSubresource(constBuffers[3], 0, nullptr, /*visibleIndBuffer.data()*/m_pGeomBufferInstVis, 0, 0);
 
     m_pDeviceContext->IASetInputLayout(m_pInputLayout);
 
@@ -399,7 +390,7 @@ void Cube::Draw(const DirectX::XMMATRIX& projMatrix, const DirectX::XMMATRIX& vi
     m_pDeviceContext->PSSetShader(ps.GetShader(), NULL, 0);
 
     m_pDeviceContext->VSSetConstantBuffers(0, 2, constBuffers.data());
-    m_pDeviceContext->VSSetConstantBuffers(2, 1, &constBuffers[3]);
+    m_pDeviceContext->VSSetConstantBuffers(2, 1, &m_pGeomBufferInstVis);
     m_pDeviceContext->PSSetConstantBuffers(2, 1, &constBuffers[2]);
 
     if (!samplers.empty() && !resources.empty())
@@ -414,8 +405,11 @@ void Cube::Draw(const DirectX::XMMATRIX& projMatrix, const DirectX::XMMATRIX& vi
     UINT offset = 0;
     m_pDeviceContext->IASetVertexBuffers(0, 1, &m_pVertextBuffer, &stride, &offset);
 
+    m_pDeviceContext->Begin(m_queries[m_curFrame % 10]);
     m_pDeviceContext->DrawIndexedInstancedIndirect(m_pIndirectArgs, 0);
-    //m_pDeviceContext->DrawIndexedInstanced(36, visibleObjectNum, 0, 0, 0);
+    m_pDeviceContext->End(m_queries[m_curFrame % 10]);
+    m_curFrame++;
+    ReadQueries(m_pDeviceContext);
 }
 
 void Cube::RenderImGUI()
@@ -431,4 +425,19 @@ void Cube::RenderImGUI()
     ImGui::Text((std::string("Visible instances num: ") + std::to_string(visibleObjectNum)).c_str());
 
     ImGui::End();
+}
+
+void Cube::ReadQueries(ID3D11DeviceContext* m_pDeviceContext)
+{
+    D3D11_QUERY_DATA_PIPELINE_STATISTICS stats;
+    
+    while (m_lastCompletedFrame < m_curFrame)
+    {
+        HRESULT result = m_pDeviceContext->GetData(m_queries[m_lastCompletedFrame % 10], &stats, sizeof(D3D11_QUERY_DATA_PIPELINE_STATISTICS), 0);
+        if (result == S_OK)
+        {
+            visibleObjectNum = (int)stats.IAPrimitives / 12;
+            m_lastCompletedFrame++;
+        }
+    }
 }

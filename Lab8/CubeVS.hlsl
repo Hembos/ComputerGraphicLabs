@@ -11,9 +11,9 @@ cbuffer GeomBufferInst : register (b1)
 	GeomBuffer geomBuffer[100];
 };
 
-cbuffer TextureNumInst : register (b2)
+cbuffer VisibleInd : register (b2)
 {
-	int4 visibleInd[100];
+	uint4 visibleInd[100];
 };
 
 struct VS_INPUT

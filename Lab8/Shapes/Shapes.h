@@ -50,7 +50,7 @@ protected:
 	ID3D11Buffer* m_pGeomBufferInstVis;
 	ID3D11UnorderedAccessView* m_pGeomBufferInstVisGPU_UAV;
 
-
+	ID3D11Query* m_queries[10];
 
 	ID3D11RasterizerState* rasterizerState;
 

@@ -66,6 +66,10 @@ void InstanceShape::Clean()
     {
         SAFE_RELEASE(sampler);
     }
+    for (auto& query : m_queries)
+    {
+        SAFE_RELEASE(query);
+    }
     SAFE_RELEASE(m_pInputLayout);
     SAFE_RELEASE(m_pIndexBuffer);
     SAFE_RELEASE(m_pIndexBuffer);

@@ -13,7 +13,7 @@ private:
 
 	struct VisibleIndexes
 	{
-		DirectX::XMINT4 idx;
+		DirectX::XMUINT4 idx;
 	};
 
 	struct TextureNum
@@ -42,6 +42,8 @@ public:
 	void Draw(const DirectX::XMMATRIX& projMatrix, const DirectX::XMMATRIX& viewMatrix,
 		ID3D11DeviceContext* m_pDeviceContext) final;
 	void RenderImGUI();
+private:
+	void ReadQueries(ID3D11DeviceContext* m_pDeviceContext);
 
 private:
 	std::vector<GeomBuffer> geomBuffers;
@@ -50,6 +52,8 @@ private:
 	std::vector<float> rotateSpeed;
 	std::vector<float> rotateAngle;
 	int visibleObjectNum = 0;
+	int m_curFrame = 0;
+	int m_lastCompletedFrame = 0;
 
 	CullParams clParams;
 };

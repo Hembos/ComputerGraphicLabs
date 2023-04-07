@@ -104,6 +104,9 @@ HRESULT PostProcessing::Resize(ID3D11Device* m_pDevice, int m_height, int m_widt
 {
     SAFE_RELEASE(m_pColorBuffer);
     SAFE_RELEASE(m_pColorBufferSRV);
+    SAFE_RELEASE(m_pColorBufferRTV);
+    SAFE_RELEASE(postProcBuffer);
+    SAFE_RELEASE(sampler);
 
     CreateBuffers(m_pDevice, m_height, m_width);
 
