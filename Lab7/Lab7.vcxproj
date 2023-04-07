@@ -261,11 +261,11 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy  $(ProjectDir)cubemap  $(OutDir)cubemap /I
+      <Command>xcopy  $(ProjectDir)cubemap  $(OutDir)cubemap /I /Y
 xcopy  $(ProjectDir)cat.dds $(OutDir) /h /i /c /k /e /r /y
 xcopy  $(ProjectDir)*.hlsl $(OutDir) /h /i /c /k /e /r /y
 xcopy  $(ProjectDir)*.hlsli $(OutDir) /h /i /c /k /e /r /y
-xcopy  $(ProjectDir)textureWithNormalMap $(OutDir)textureWithNormalMap /I</Command>
+xcopy  $(ProjectDir)textureWithNormalMap $(OutDir)textureWithNormalMap /I /Y</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -284,11 +284,11 @@ xcopy  $(ProjectDir)textureWithNormalMap $(OutDir)textureWithNormalMap /I</Comma
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy  $(ProjectDir)cubemap  $(OutDir)cubemap /I
+      <Command>xcopy  $(ProjectDir)cubemap  $(OutDir)cubemap /I /Y
 xcopy  $(ProjectDir)cat.dds $(OutDir) /h /i /c /k /e /r /y
 xcopy  $(ProjectDir)*.hlsl $(OutDir) /h /i /c /k /e /r /y
 xcopy  $(ProjectDir)*.hlsli $(OutDir) /h /i /c /k /e /r /y
-xcopy  $(ProjectDir)textureWithNormalMap $(OutDir)textureWithNormalMap /I</Command>
+xcopy  $(ProjectDir)textureWithNormalMap $(OutDir)textureWithNormalMap /I /Y</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
