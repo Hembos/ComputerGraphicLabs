@@ -38,3 +38,15 @@ class ShaderInclude : public ID3DInclude
 	HRESULT Open(D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID* ppData, UINT* pBytes) final;
 	HRESULT Close(LPCVOID pData) final;
 };
+
+class ComputeShader
+{
+public:
+	void Clean();
+	bool Initialize(ID3D11Device* device, std::wstring shaderpath, D3D_SHADER_MACRO* defines);
+	ID3D11ComputeShader* GetShader();
+	ID3D10Blob* GetBuffer();
+private:
+	ID3D11ComputeShader* shader;
+	ID3D10Blob* shaderBuffer;
+};

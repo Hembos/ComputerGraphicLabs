@@ -97,3 +97,39 @@ HRESULT ShaderInclude::Close(LPCVOID pData)
 	delete pData;
 	return S_OK;
 }
+
+void ComputeShader::Clean()
+{
+	SAFE_RELEASE(shader);
+	SAFE_RELEASE(shaderBuffer);
+}
+
+bool ComputeShader::Initialize(ID3D11Device* device, std::wstring shaderpath, D3D_SHADER_MACRO* defines)
+{
+	ShaderInclude include;
+	ID3DBlob* pErrMsg = nullptr;
+	HRESULT hr = D3DCompileFromFile(shaderpath.c_str(), defines, &include, "main", "cs_5_0", NULL, NULL, &shaderBuffer, &pErrMsg);
+	if (!SUCCEEDED(hr) && pErrMsg != nullptr)
+	{
+		OutputDebugStringA((const char*)pErrMsg->GetBufferPointer());
+		return false;
+	}
+
+	hr = device->CreateComputeShader(shaderBuffer->GetBufferPointer(), shaderBuffer->GetBufferSize(), NULL, &shader);
+	if (!SUCCEEDED(hr))
+	{
+		return false;
+	}
+
+	return true;
+}
+
+ID3D11ComputeShader* ComputeShader::GetShader()
+{
+	return shader;
+}
+
+ID3D10Blob* ComputeShader::GetBuffer()
+{
+	return shaderBuffer;
+}

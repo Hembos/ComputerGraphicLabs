@@ -10,6 +10,7 @@
 #pragma comment(lib, "d3d11")
 
 #define SAFE_RELEASE(p) if (p != NULL) { p->Release(); p = NULL; }
+#define DivUp(x, y) (x % y) ? x / y + 1 : x / y
 
 class InstanceShape
 {
@@ -18,6 +19,7 @@ protected:
 	{
 		DirectX::XMMATRIX vp;
 		DirectX::XMVECTOR cameraPos;
+		DirectX::XMVECTOR frustum[6];
 	};
 public:
 	virtual HRESULT CreateGeometry(ID3D11Device* m_pDevice) = 0;
@@ -40,10 +42,21 @@ protected:
 	ID3D11Buffer* m_pIndexBuffer = NULL;
 	ID3D11Buffer* m_pVertextBuffer = NULL;
 
+	ID3D11Buffer* m_pIndirectArgsSrc;
+	ID3D11Buffer* m_pIndirectArgs;
+	ID3D11UnorderedAccessView* m_pIndirectArgsUAV;
+
+	ID3D11Buffer* m_pGeomBufferInstVisGPU;
+	ID3D11Buffer* m_pGeomBufferInstVis;
+	ID3D11UnorderedAccessView* m_pGeomBufferInstVisGPU_UAV;
+
+
+
 	ID3D11RasterizerState* rasterizerState;
 
 	VertexShader vs;
 	PixelShader ps;
+	ComputeShader cs;
 	ID3D11InputLayout* m_pInputLayout = NULL;
 
 	std::vector<ID3D11Buffer*> constBuffers;

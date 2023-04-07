@@ -19,6 +19,13 @@ private:
 	struct TextureNum
 	{
 		DirectX::XMINT4 i;
+	}; 
+
+	struct CullParams
+	{
+		DirectX::XMINT4 numShapes;
+		DirectX::XMFLOAT4 bbMin[100];
+		DirectX::XMFLOAT4 bbMax[100];
 	};
 
 	struct Vertex
@@ -43,4 +50,6 @@ private:
 	std::vector<float> rotateSpeed;
 	std::vector<float> rotateAngle;
 	int visibleObjectNum = 0;
+
+	CullParams clParams;
 };

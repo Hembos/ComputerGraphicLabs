@@ -162,6 +162,88 @@ HRESULT Cube::CreateGeometry(ID3D11Device* m_pDevice)
         constBuffers.push_back(m_pVisibleInstInd);
     }
 
+    if (SUCCEEDED(hr))
+    {
+        desc = { 0 };
+        desc.ByteWidth = sizeof(D3D11_DRAW_INDEXED_INSTANCED_INDIRECT_ARGS);
+        desc.Usage = D3D11_USAGE_DEFAULT;
+        desc.BindFlags = D3D11_BIND_UNORDERED_ACCESS;
+        desc.CPUAccessFlags = 0;
+        desc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+        desc.StructureByteStride = sizeof(UINT);
+
+        hr = m_pDevice->CreateBuffer(&desc, NULL, &m_pIndirectArgsSrc);
+
+        if (SUCCEEDED(hr))
+        {
+            hr = m_pDevice->CreateUnorderedAccessView(m_pIndirectArgsSrc, nullptr, &m_pIndirectArgsUAV);
+        }
+    }
+
+    if (SUCCEEDED(hr))
+    {
+        desc = { 0 };
+        desc.ByteWidth = sizeof(D3D11_DRAW_INDEXED_INSTANCED_INDIRECT_ARGS);
+        desc.Usage = D3D11_USAGE_DEFAULT;
+        desc.BindFlags = 0;
+        desc.CPUAccessFlags = 0;
+        desc.MiscFlags = D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS;
+        desc.StructureByteStride = 0;
+
+        hr = m_pDevice->CreateBuffer(&desc, NULL, &m_pIndirectArgs);
+    }
+
+    if (SUCCEEDED(hr))
+    {
+        desc = { 0 };
+        desc.ByteWidth = sizeof(DirectX::XMINT4) * maxInstancesNum;
+        desc.Usage = D3D11_USAGE_DEFAULT;
+        desc.BindFlags = D3D11_BIND_UNORDERED_ACCESS;
+        desc.CPUAccessFlags = 0;
+        desc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+        desc.StructureByteStride = sizeof(DirectX::XMINT4);
+
+        hr = m_pDevice->CreateBuffer(&desc, NULL, &m_pGeomBufferInstVisGPU);
+
+        if (SUCCEEDED(hr))
+        {
+            hr = m_pDevice->CreateUnorderedAccessView(m_pGeomBufferInstVisGPU, nullptr, &m_pGeomBufferInstVisGPU_UAV);
+        }
+    }
+
+    if (SUCCEEDED(hr))
+    {
+        desc = { 0 };
+        desc.ByteWidth = sizeof(DirectX::XMINT4) * maxInstancesNum;
+        desc.Usage = D3D11_USAGE_DEFAULT;
+        desc.BindFlags = 0;
+        desc.CPUAccessFlags = 0;
+        desc.MiscFlags = D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS;
+        desc.StructureByteStride = 0;
+
+        hr = m_pDevice->CreateBuffer(&desc, NULL, &m_pGeomBufferInstVis);
+    }
+
+    ID3D11Buffer* m_pCullParams;
+
+    if (SUCCEEDED(hr))
+    {
+        desc = { 0 };
+        desc.ByteWidth = sizeof(CullParams);
+        desc.Usage = D3D11_USAGE_DEFAULT;
+        desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+        desc.CPUAccessFlags = 0;
+        desc.MiscFlags = 0;
+        desc.StructureByteStride = 0;
+
+        hr = m_pDevice->CreateBuffer(&desc, NULL, &m_pCullParams);
+    }
+
+    if (SUCCEEDED(hr))
+    {
+        constBuffers.push_back(m_pCullParams);
+    }
+
     for (int i = 0; i < maxInstancesNum; i++)
     {
         translateMatrices.push_back(DirectX::XMMatrixTranslation(rand() % 10, rand() % 10, rand() % 10));
@@ -193,6 +275,11 @@ HRESULT Cube::CreateShaders(ID3D11Device* m_pDevice)
     HRESULT result = m_pDevice->CreateInputLayout(InputDesc, ARRAYSIZE(InputDesc), vs.GetBuffer()->GetBufferPointer(), vs.GetBuffer()->GetBufferSize(), &m_pInputLayout);
 
     if (!ps.Initialize(m_pDevice, L"CubePS.hlsl", nullptr))
+    {
+        return S_FALSE;
+    }
+
+    if (!cs.Initialize(m_pDevice, L"FrustumCullingCS.hlsl", nullptr))
     {
         return S_FALSE;
     }
@@ -254,6 +341,25 @@ HRESULT Cube::CreateTextures(ID3D11Device* m_pDevice)
 void Cube::Draw(const DirectX::XMMATRIX& projMatrix, const DirectX::XMMATRIX& viewMatrix,
 	ID3D11DeviceContext* m_pDeviceContext)
 {
+    D3D11_DRAW_INDEXED_INSTANCED_INDIRECT_ARGS args;
+    args.IndexCountPerInstance = 36;
+    args.InstanceCount = 0;
+    args.StartIndexLocation = 0;
+    args.StartInstanceLocation = 0;
+    args.BaseVertexLocation = 0;
+
+    m_pDeviceContext->UpdateSubresource(m_pIndirectArgsSrc, 0, nullptr, &args, 0, 0);
+    UINT groupNumber = DivUp(maxInstancesNum, 64u);
+    m_pDeviceContext->CSSetConstantBuffers(0, 1, constBuffers.data());
+    m_pDeviceContext->CSSetConstantBuffers(1, 1, &constBuffers[4]);
+    ID3D11UnorderedAccessView* uavBuffers[2] = { m_pIndirectArgsUAV, m_pGeomBufferInstVisGPU_UAV };
+    m_pDeviceContext->CSSetUnorderedAccessViews(0, 2, uavBuffers, nullptr);
+    m_pDeviceContext->CSSetShader(cs.GetShader(), nullptr, 0);
+    m_pDeviceContext->Dispatch(groupNumber, 1, 1);
+
+    m_pDeviceContext->CopyResource(m_pGeomBufferInstVis, m_pGeomBufferInstVisGPU);
+    m_pDeviceContext->CopyResource(m_pIndirectArgs, m_pIndirectArgsSrc);
+
     m_pDeviceContext->RSSetState(rasterizerState);
 
     DirectX::BoundingFrustum fr(projMatrix, true);
@@ -285,7 +391,7 @@ void Cube::Draw(const DirectX::XMMATRIX& projMatrix, const DirectX::XMMATRIX& vi
     m_pDeviceContext->UpdateSubresource(constBuffers[0], 0, nullptr, &scBuffer, 0, 0);
     m_pDeviceContext->UpdateSubresource(constBuffers[1], 0, nullptr, geomBuffers.data(), 0, 0);
     m_pDeviceContext->UpdateSubresource(constBuffers[2], 0, nullptr, texNumBuffers.data(), 0, 0);
-    m_pDeviceContext->UpdateSubresource(constBuffers[3], 0, nullptr, visibleIndBuffer.data(), 0, 0);
+    m_pDeviceContext->UpdateSubresource(constBuffers[3], 0, nullptr, /*visibleIndBuffer.data()*/m_pGeomBufferInstVis, 0, 0);
 
     m_pDeviceContext->IASetInputLayout(m_pInputLayout);
 
@@ -308,7 +414,8 @@ void Cube::Draw(const DirectX::XMMATRIX& projMatrix, const DirectX::XMMATRIX& vi
     UINT offset = 0;
     m_pDeviceContext->IASetVertexBuffers(0, 1, &m_pVertextBuffer, &stride, &offset);
 
-    m_pDeviceContext->DrawIndexedInstanced(36, visibleObjectNum, 0, 0, 0);
+    m_pDeviceContext->DrawIndexedInstancedIndirect(m_pIndirectArgs, 0);
+    //m_pDeviceContext->DrawIndexedInstanced(36, visibleObjectNum, 0, 0, 0);
 }
 
 void Cube::RenderImGUI()

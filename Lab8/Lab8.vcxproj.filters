@@ -180,6 +180,7 @@
     <FxCompile Include="PostProcVS.hlsl" />
     <FxCompile Include="SkyBoxPS.hlsl" />
     <FxCompile Include="SkyBoxVS.hlsl" />
+    <FxCompile Include="FrustumCullingCS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Light.hlsli" />
