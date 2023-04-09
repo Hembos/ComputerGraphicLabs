@@ -1,0 +1,6 @@
+x64
+*.cso
+*.user
+.vs/
+Debug
+Release
